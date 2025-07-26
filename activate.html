@@ -101,6 +101,11 @@
                 <label for="activation-code">Activation Code</label>
                 <input type="text" id="activation-code" class="form-control" name="activation_code" required placeholder="ACT-XXXXXXXXXXXX">
             </div>
+            <!-- NEW: Name Field -->
+            <div class="form-group">
+                <label for="name">Your Name (as on purchase)</label>
+                <input type="text" id="name" class="form-control" name="name" required placeholder="John Doe">
+            </div>
             <div class="form-group">
                 <label for="email">Email Address</label>
                 <input type="email" id="email" class="form-control" name="email" required placeholder="you@example.com">
@@ -116,7 +121,6 @@
         <div id="message-container" class="message"></div>
     </div>
     
-    <!-- FIX: Changed from Jinja2 syntax to a standard relative path -->
     <script src="activation.js"></script>
 </body>
 </html>
