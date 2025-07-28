@@ -601,6 +601,10 @@ if (document.getElementById('appContainer')) {
                 await ensurePlatformsData(); // Ensure platforms data is loaded
             }
             
+            if (view === 'tiers' && platformId) {
+                await ensureTiersData(platformId); // Ensure tiers data for this platform is loaded
+            }
+            
             if (view === 'content') {
                 await ensureTiersData(platformId); // Ensure tiers data for this platform is loaded
             }
