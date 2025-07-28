@@ -122,6 +122,20 @@ if (document.getElementById('appContainer')) {
         }
     }
 
+    function getDaysAgo(dateString) {
+        if (!dateString) return '';
+        try {
+            const contentDate = new Date(dateString);
+            const now = new Date();
+            const diffTime = now - contentDate;
+            const diffDays = Math.floor(diffTime / (24 * 60 * 60 * 1000));
+            return diffDays === 0 ? 'Today' : `${diffDays} day${diffDays === 1 ? '' : 's'} ago`;
+        } catch (error) {
+            console.warn('Invalid date string for days ago:', dateString);
+            return '';
+        }
+    }
+
     function hasRecentContent(contentData) {
         return Object.values(contentData)
             .flat()
@@ -131,12 +145,10 @@ if (document.getElementById('appContainer')) {
     // --- Reattach copy button listeners ---
     function reattachCopyButtonListeners() {
         document.querySelectorAll('.copy-btn').forEach(button => {
-            // Remove existing listeners by cloning
             const newButton = button.cloneNode(true);
             button.parentNode.replaceChild(newButton, button);
         });
         
-        // Attach new listeners
         document.querySelectorAll('.copy-btn').forEach(button => {
             button.addEventListener('click', () => {
                 const linkCard = button.closest('.link-card');
@@ -177,7 +189,6 @@ if (document.getElementById('appContainer')) {
         const query = event.target.value.toLowerCase().trim();
         currentFilterState.query = query;
         
-        // Clear empty message when user starts typing
         const emptyMessage = document.getElementById('searchEmptyMessage');
         if (emptyMessage && query === '') {
             emptyMessage.remove();
@@ -431,23 +442,28 @@ if (document.getElementById('appContainer')) {
             const tierGroup = document.createElement('div');
             tierGroup.className = 'tier-group';
             links.forEach(link => {
+                const isRecentContent = isRecent(link.added_at);
+                console.log(`Render: Link "${link.title}" - Recent: ${isRecentContent}, Added: ${link.added_at}`);
+                
                 const card = document.createElement('div');
                 card.className = 'link-card';
                 if (link.locked) card.classList.add('locked');
-                if (isRecent(link.added_at)) {
+                if (isRecentContent) {
                     card.classList.add('is-new');
+                    console.log(`Applied is-new class to "${link.title}"`);
                 }
                 card.dataset.contentType = link.content_type || 'Video';
                 if (link.thumbnail_url) {
                     const thumbnailContainer = document.createElement('div');
                     thumbnailContainer.className = 'thumbnail-container';
-                    if (isRecent(link.added_at)) {
+                    if (isRecentContent) {
                         const newBadge = document.createElement('div');
                         newBadge.className = 'new-badge';
-                        newBadge.textContent = 'New!';
+                        newBadge.textContent = `New! (${getDaysAgo(link.added_at)})`;
                         thumbnailContainer.appendChild(newBadge);
+                        console.log(`Added badge to "${link.title}" with text: ${newBadge.textContent}`);
                     }
-                    const thumbnailImage = document.createElement('img'); // Fixed: Changed from 'div' to 'img'
+                    const thumbnailImage = document.createElement('img');
                     thumbnailImage.src = link.thumbnail_url;
                     thumbnailImage.alt = `Thumbnail for ${link.title}`;
                     thumbnailImage.loading = 'lazy';
@@ -495,10 +511,9 @@ if (document.getElementById('appContainer')) {
         if (!hasVisibleContent) {
             linksContentContainer.innerHTML = `<p class="empty-tier-message">No content matches your search/filter criteria.</p>`;
         }
-        // Store the original HTML structure for search reset functionality
         if (linksContentContainer && hasVisibleContent) {
             originalContentHTML = linksContentContainer.innerHTML;
-            reattachCopyButtonListeners(); // Attach listeners immediately after rendering
+            reattachCopyButtonListeners();
         }
     }
 
@@ -590,12 +605,10 @@ if (document.getElementById('appContainer')) {
     function applyFilters() {
         const { view, type, query } = currentFilterState;
         
-        // If all filters are cleared, restore original content
         if (view === 'All' && type === 'All' && query === '') {
             const linksContentContainer = document.getElementById('linksContentContainer');
             if (originalContentHTML && linksContentContainer) {
                 linksContentContainer.innerHTML = originalContentHTML;
-                // Debug logging
                 console.log("Restored HTML:", originalContentHTML.substring(0, 200));
                 console.log("Current cards count:", document.querySelectorAll('.link-card').length);
                 reattachCopyButtonListeners();
@@ -606,12 +619,10 @@ if (document.getElementById('appContainer')) {
         let hasVisibleContent = false;
         const emptyMessage = document.getElementById('searchEmptyMessage');
         
-        // Remove existing empty message if present
         if (emptyMessage) {
             emptyMessage.remove();
         }
         
-        // Apply filters to existing DOM elements
         document.querySelectorAll('.link-card').forEach(card => {
             const cardText = (
                 (card.querySelector('h3')?.textContent || '') + ' ' +
@@ -619,22 +630,34 @@ if (document.getElementById('appContainer')) {
                 (card.querySelector('.meta-info')?.textContent || '')
             ).toLowerCase();
             
-            const isViewMatch = (view === 'All') || (view === 'Recent' && card.classList.contains('is-new'));
+            const isRecentContent = card.classList.contains('is-new');
+            const isViewMatch = (view === 'All') || (view === 'Recent' && isRecentContent);
             const isTypeMatch = (type === 'All') || (card.dataset.contentType === type);
             const isQueryMatch = (query === '') || cardText.includes(query);
             
             const shouldShow = isViewMatch && isTypeMatch && isQueryMatch;
             card.style.display = shouldShow ? 'block' : 'none';
+            
+            // Apply recent-highlight class when Recent filter is active
+            if (view === 'Recent' && isRecentContent) {
+                card.classList.add('recent-highlight');
+                const badge = card.querySelector('.new-badge');
+                if (badge) {
+                    console.log(`Badge visible for card: ${card.querySelector('h3')?.textContent}`);
+                }
+            } else {
+                card.classList.remove('recent-highlight');
+            }
+            
             if (shouldShow) hasVisibleContent = true;
+            console.log(`Filter: Card "${card.querySelector('h3')?.textContent}" - Show: ${shouldShow}, Recent: ${isRecentContent}`);
         });
         
-        // Handle tier group visibility
         document.querySelectorAll('.tier-group').forEach(group => {
             const hasVisibleCards = group.querySelector('.link-card:not([style*="display: none"])');
             group.style.display = hasVisibleCards ? 'block' : 'none';
         });
         
-        // Show empty message without destroying content
         if (!hasVisibleContent) {
             const linksContentContainer = document.getElementById('linksContentContainer');
             if (linksContentContainer && !document.getElementById('searchEmptyMessage')) {
