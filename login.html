@@ -3,24 +3,32 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>TheLustRoom - VIP Links Login</title>
-    <link rel="stylesheet" href="style.css"> <!-- Optional: Link to your CSS -->
+    <title>Login - The Echo Chamber</title>
+    <link rel="stylesheet" href="style.css">
 </head>
 <body>
     <div class="container">
-        <h1>VIP Links Access</h1>
-        <p>Please enter your License Key to view exclusive links.</p>
+        <h1>The Echo Chamber</h1>
+        <p style="text-align: center; color: #aaa; margin-top: -20px; margin-bottom: 30px;">Member Access</p>
         
         <form id="loginForm">
-            <div>
-                <label for="licenseKey">License Key:</label>
-                <input type="text" id="licenseKey" name="licenseKey" required>
+            <div class="form-group">
+                <label for="email">Email Address</label>
+                <input type="email" id="email" name="email" required autocomplete="email">
+            </div>
+            <div class="form-group">
+                <label for="password">Password</label>
+                <input type="password" id="password" name="password" required autocomplete="current-password">
             </div>
             <button type="submit">Login</button>
         </form>
         
         <div id="errorMessage" class="error-message" style="display:none;"></div>
-        <div id="loadingMessage" style="display:none;">Logging in...</div>
+        <div id="loadingMessage" class="loading-message" style="display:none;">Logging in...</div>
+        
+        <p style="text-align: center; font-size: 0.8em; color: #777; margin-top: 25px;">
+            First time here? <a href="activate.html" style="color: #00aaff;">Activate your account</a>.
+        </p>
     </div>
 
     <script src="app.js"></script>
