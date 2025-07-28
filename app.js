@@ -4,7 +4,7 @@
 const API_BASE_URL = "https://lustroom-downloader-backend.onrender.com/api/v1";
 
 // --- State and Data Store ---
-let originalContentHTML = null; // Add module-level variable for preserving content
+let originalContentHTML = null; // Module-level variable for preserving content
 
 // --- Logic for login.html ---
 if (document.getElementById('loginForm')) {
@@ -128,14 +128,15 @@ if (document.getElementById('appContainer')) {
             .some(link => isRecent(link.added_at));
     }
 
-    // --- NEW: Reattach copy button listeners ---
+    // --- Reattach copy button listeners ---
     function reattachCopyButtonListeners() {
         document.querySelectorAll('.copy-btn').forEach(button => {
-            // Remove existing listeners to prevent duplicates
-            button.replaceWith(button.cloneNode(true));
+            // Remove existing listeners by cloning
+            const newButton = button.cloneNode(true);
+            button.parentNode.replaceChild(newButton, button);
         });
         
-        // Re-attach copy button functionality
+        // Attach new listeners
         document.querySelectorAll('.copy-btn').forEach(button => {
             button.addEventListener('click', () => {
                 const linkCard = button.closest('.link-card');
@@ -150,13 +151,15 @@ if (document.getElementById('appContainer')) {
                             button.textContent = 'Copy Link';
                             button.classList.remove('copied');
                         }, 2000);
+                    }).catch(err => {
+                        console.error('Failed to copy:', err);
                     });
                 }
             });
         });
     }
 
-    // --- NEW: Debounce function for search input ---
+    // --- Debounce function for search input ---
     function debounce(func, wait) {
         let timeout;
         return function executedFunction(...args) {
@@ -169,7 +172,7 @@ if (document.getElementById('appContainer')) {
         };
     }
 
-    // --- NEW: Handle search input ---
+    // --- Handle search input ---
     function handleSearchInput(event) {
         const query = event.target.value.toLowerCase().trim();
         currentFilterState.query = query;
@@ -183,7 +186,7 @@ if (document.getElementById('appContainer')) {
         applyFilters();
     }
 
-    // --- STEP 1: Async Guard Functions for Data Caching ---
+    // --- Async Guard Functions for Data Caching ---
     async function ensurePlatformsData() {
         if (allPlatformsData.length > 0) {
             return Promise.resolve(allPlatformsData);
@@ -316,7 +319,7 @@ if (document.getElementById('appContainer')) {
         }
     };
 
-    // --- STEP 3: Simplified View-Rendering Functions ---
+    // --- Simplified View-Rendering Functions ---
     function renderPlatforms(platforms) {
         let platformsHTML = '<div class="platforms-grid">';
         platforms.forEach(platform => {
@@ -390,6 +393,8 @@ if (document.getElementById('appContainer')) {
                     </div>
                     <div id="filterContainer" class="filter-container"></div>
                     <div id="linksContentContainer"></div>`;
+                
+                const linksContentContainer = document.getElementById('linksContentContainer');
                 document.getElementById('searchContainer').style.display = 'block';
                 const searchInput = document.getElementById('searchInput');
                 if (searchInput) {
@@ -399,12 +404,9 @@ if (document.getElementById('appContainer')) {
                 addBackButtonListener('tiers', platformId);
                 renderContent(data.content);
                 setupFilters(data.content);
-                // Store the original HTML structure for search reset functionality
-                if (linksContentContainer) {
-                    originalContentHTML = linksContentContainer.innerHTML;
-                }
             } else if (response.status === 401 || response.status === 403) {
-                localStorage.clear(); window.location.href = 'login.html';
+                localStorage.clear();
+                window.location.href = 'login.html';
             } else {
                 displayError(data.message || "Failed to fetch content.");
             }
@@ -445,7 +447,7 @@ if (document.getElementById('appContainer')) {
                         newBadge.textContent = 'New!';
                         thumbnailContainer.appendChild(newBadge);
                     }
-                    const thumbnailImage = document.createElement('div');
+                    const thumbnailImage = document.createElement('img'); // Fixed: Changed from 'div' to 'img'
                     thumbnailImage.src = link.thumbnail_url;
                     thumbnailImage.alt = `Thumbnail for ${link.title}`;
                     thumbnailImage.loading = 'lazy';
@@ -481,16 +483,6 @@ if (document.getElementById('appContainer')) {
                     const copyButton = document.createElement('button');
                     copyButton.className = 'copy-btn';
                     copyButton.textContent = 'Copy Link';
-                    copyButton.addEventListener('click', () => {
-                        navigator.clipboard.writeText(link.url).then(() => {
-                            copyButton.textContent = 'Copied! ✓';
-                            copyButton.classList.add('copied');
-                            setTimeout(() => {
-                                copyButton.textContent = 'Copy Link';
-                                copyButton.classList.remove('copied');
-                            }, 2000);
-                        });
-                    });
                     actionsContainer.appendChild(copyButton);
                     cardContent.appendChild(actionsContainer);
                 }
@@ -506,10 +498,11 @@ if (document.getElementById('appContainer')) {
         // Store the original HTML structure for search reset functionality
         if (linksContentContainer && hasVisibleContent) {
             originalContentHTML = linksContentContainer.innerHTML;
+            reattachCopyButtonListeners(); // Attach listeners immediately after rendering
         }
     }
 
-    // --- ENHANCED: Setup filters with Recently Added support ---
+    // --- Setup filters with Recently Added support ---
     function setupFilters(contentData) {
         const filterContainer = document.getElementById('filterContainer');
         if (!filterContainer) return;
@@ -574,7 +567,7 @@ if (document.getElementById('appContainer')) {
         filterContainer.addEventListener('click', handleFilterClick);
     }
     
-    // --- ENHANCED: Filter handling with search support ---
+    // --- Filter handling with search support ---
     function handleFilterClick(event) {
         if (!event.target.classList.contains('filter-btn')) return;
         
@@ -593,15 +586,18 @@ if (document.getElementById('appContainer')) {
         applyFilters();
     }
 
-    // --- ENHANCED: Apply filters with search support ---
+    // --- Apply filters with search support ---
     function applyFilters() {
         const { view, type, query } = currentFilterState;
         
         // If all filters are cleared, restore original content
         if (view === 'All' && type === 'All' && query === '') {
-            if (originalContentHTML && document.getElementById('linksContentContainer')) {
-                document.getElementById('linksContentContainer').innerHTML = originalContentHTML;
-                // Re-attach event listeners for copy buttons
+            const linksContentContainer = document.getElementById('linksContentContainer');
+            if (originalContentHTML && linksContentContainer) {
+                linksContentContainer.innerHTML = originalContentHTML;
+                // Debug logging
+                console.log("Restored HTML:", originalContentHTML.substring(0, 200));
+                console.log("Current cards count:", document.querySelectorAll('.link-card').length);
                 reattachCopyButtonListeners();
             }
             return;
@@ -651,7 +647,7 @@ if (document.getElementById('appContainer')) {
         }
     }
 
-    // --- STEP 4: Navigation Handlers ---
+    // --- Navigation Handlers ---
     function handlePlatformClick(event) {
         const card = event.target.closest('.platform-card');
         if (!card) return;
@@ -689,7 +685,7 @@ if (document.getElementById('appContainer')) {
         };
     }
 
-    // --- STEP 2: Main Application Router ---
+    // --- Main Application Router ---
     async function router() {
         if (!isTokenValid()) {
             window.location.href = 'login.html';
