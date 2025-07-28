@@ -119,23 +119,33 @@ button:disabled {
 .link-card {
     background-color: #2a2a2a;
     border: 1px solid #444;
-    border-radius: 8px; /* Slightly larger radius for the whole card */
+    border-radius: 8px;
     margin-bottom: 20px;
-    overflow: hidden;   /* Crucial for containing the thumbnail's corners */
-    padding: 0;         /* Remove padding from the card itself */
+    overflow: hidden;
+    padding: 0;
+    /* *** NEW: Animation Properties *** */
+    transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out, border-color 0.2s ease-in-out;
 }
+
+/* *** NEW: Interactive Hover Effect for Unlocked Cards *** */
+.link-card:not(.locked):hover {
+    transform: translateY(-4px);
+    border-color: #007bff;
+    box-shadow: 0 8px 20px rgba(0, 123, 255, 0.15);
+}
+
 
 .link-card .thumbnail-container {
     width: 100%;
     aspect-ratio: 16 / 9;
-    background-color: #333; /* A placeholder color while the image loads */
+    background-color: #333;
 }
 
 .link-card .thumbnail-container img {
     width: 100%;
     height: 100%;
-    object-fit: cover; /* Ensures the image covers the container without distortion */
-    display: block;    /* Removes the small space that can appear under an image */
+    object-fit: cover;
+    display: block;
 }
 
 .link-card .card-content {
@@ -191,13 +201,12 @@ button:disabled {
     margin-right: 15px;
 }
 
-/* *** NEW: Card Actions Styles *** */
 .card-actions {
     margin-top: 15px;
     padding-top: 15px;
     border-top: 1px solid #3a3a3a;
     display: flex;
-    justify-content: flex-end; /* Align button to the right */
+    justify-content: flex-end;
 }
 
 .copy-btn {
@@ -207,17 +216,18 @@ button:disabled {
     padding: 6px 12px;
     font-size: 0.85em;
     font-weight: normal;
-    width: auto; /* Override default full-width */
+    width: auto;
     border-radius: 5px;
+    /* *** NEW: Animation Property *** */
+    transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease;
 }
 
 .copy-btn:hover {
     background-color: #555;
 }
 
-/* Style for the button after successful copy */
 .copy-btn.copied {
-    background-color: #28a745; /* A success green */
+    background-color: #28a745;
     color: white;
     border-color: #28a745;
 }
@@ -236,8 +246,9 @@ button:disabled {
     margin: 0 5px;
     border-radius: 20px;
     cursor: pointer;
-    transition: background-color 0.2s;
     width: auto;
+    /* *** UPDATED: More comprehensive transition *** */
+    transition: all 0.2s ease-in-out;
 }
 
 .filter-btn:hover {
