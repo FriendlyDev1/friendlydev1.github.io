@@ -70,12 +70,11 @@ if (document.getElementById('loginForm')) {
 }
 
 
-// --- Logic for links.html (FINAL VERSION WITH FILTERING) ---
+// --- Logic for links.html ---
 if (document.getElementById('linksContainer')) {
     const linksContainer = document.getElementById('linksContainer');
     const filterContainer = document.getElementById('filterContainer');
     const logoutButton = document.getElementById('logoutButton');
-    const linksLoadingMessageDiv = document.getElementById('loadingMessageLinks');
     const linksErrorMessageDiv = document.getElementById('linksErrorMessage');
 
     function isTokenValid() {
@@ -90,6 +89,34 @@ if (document.getElementById('linksContainer')) {
         return (obtainedAt + expiresIn - 60) > nowInSeconds;
     }
     
+    // *** NEW: Function to render skeleton placeholders ***
+    function renderSkeleton() {
+        let skeletonHTML = '';
+        // Render 2 skeleton tier groups, each with 2 cards
+        for (let i = 0; i < 2; i++) {
+            skeletonHTML += `
+                <div class="tier-group">
+                    <div class="skeleton skeleton-title"></div>
+                    <div class="skeleton-card">
+                        <div class="skeleton skeleton-thumbnail"></div>
+                        <div class="skeleton-card-content">
+                            <div class="skeleton skeleton-text"></div>
+                            <div class="skeleton skeleton-text short"></div>
+                        </div>
+                    </div>
+                    <div class="skeleton-card">
+                        <div class="skeleton skeleton-thumbnail"></div>
+                        <div class="skeleton-card-content">
+                            <div class="skeleton skeleton-text"></div>
+                            <div class="skeleton skeleton-text short"></div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+        linksContainer.innerHTML = skeletonHTML;
+    }
+
     async function fetchAndDisplayContent() {
         if (!isTokenValid()) {
             console.log("No valid token found, redirecting to login.");
@@ -97,7 +124,7 @@ if (document.getElementById('linksContainer')) {
             return;
         }
 
-        showLinksLoading(true);
+        renderSkeleton(); // **MODIFIED**: Show skeleton instead of simple text
         displayLinksError("");
 
         try {
@@ -108,7 +135,6 @@ if (document.getElementById('linksContainer')) {
             });
 
             const data = await response.json();
-            showLinksLoading(false);
 
             if (response.ok && data.status === 'success' && data.content) {
                 if (Object.keys(data.content).length === 0) {
@@ -122,10 +148,11 @@ if (document.getElementById('linksContainer')) {
                 localStorage.clear();
                 window.location.href = 'login.html';
             } else {
+                linksContainer.innerHTML = ''; // **MODIFIED**: Clear skeleton on error
                 displayLinksError(data.message || "Failed to fetch content.");
             }
         } catch (error) {
-            showLinksLoading(false);
+            linksContainer.innerHTML = ''; // **MODIFIED**: Clear skeleton on error
             console.error("Fetch content error:", error);
             displayLinksError("An error occurred while fetching content. Please check your connection or try again later.");
         }
@@ -207,7 +234,6 @@ if (document.getElementById('linksContainer')) {
                 }
                 cardContent.appendChild(metaInfo);
 
-                // *** NEW: Copy Button Implementation ***
                 if (!link.locked) {
                     const actionsContainer = document.createElement('div');
                     actionsContainer.className = 'card-actions';
@@ -315,19 +341,6 @@ if (document.getElementById('linksContainer')) {
             linksErrorMessageDiv.textContent = message;
             linksErrorMessageDiv.style.display = message ? 'block' : 'none';
         }
-    }
-
-    function showLinksLoading(isLoading) {
-        if (linksLoadingMessageDiv) {
-            linksLoadingMessageDiv.style.display = isLoading ? 'block' : 'none';
-        }
-    }
-
-    if (logoutButton) {
-        logoutButton.addEventListener('click', function() {
-            localStorage.clear();
-            window.location.href = 'login.html';
-        });
     }
 
     document.addEventListener('DOMContentLoaded', fetchAndDisplayContent);

@@ -109,12 +109,6 @@ button:disabled {
     border-radius: 4px;
 }
 
-.loading-message {
-    text-align: center;
-    color: #ccc;
-    margin-top: 20px;
-}
-
 /* Styling for Link Cards */
 .link-card {
     background-color: #2a2a2a;
@@ -123,11 +117,9 @@ button:disabled {
     margin-bottom: 20px;
     overflow: hidden;
     padding: 0;
-    /* *** NEW: Animation Properties *** */
     transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out, border-color 0.2s ease-in-out;
 }
 
-/* *** NEW: Interactive Hover Effect for Unlocked Cards *** */
 .link-card:not(.locked):hover {
     transform: translateY(-4px);
     border-color: #007bff;
@@ -218,7 +210,6 @@ button:disabled {
     font-weight: normal;
     width: auto;
     border-radius: 5px;
-    /* *** NEW: Animation Property *** */
     transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease;
 }
 
@@ -247,7 +238,6 @@ button:disabled {
     border-radius: 20px;
     cursor: pointer;
     width: auto;
-    /* *** UPDATED: More comprehensive transition *** */
     transition: all 0.2s ease-in-out;
 }
 
@@ -274,4 +264,50 @@ button:disabled {
     font-weight: bold;
     color: #eee;
     margin-bottom: 15px;
+}
+
+/* *** NEW: Skeleton Loader Styles *** */
+@keyframes pulse-bg {
+    0% { background-color: #2a2a2a; }
+    50% { background-color: #3a3a3a; }
+    100% { background-color: #2a2a2a; }
+}
+
+.skeleton {
+    animation: pulse-bg 1.5s infinite ease-in-out;
+    border-radius: 4px;
+}
+
+.skeleton-title {
+    height: 30px;
+    width: 40%;
+    margin-bottom: 15px;
+}
+
+.skeleton-card {
+    background-color: transparent; /* The card itself has no bg */
+    border: 1px solid #444;
+    border-radius: 8px;
+    margin-bottom: 20px;
+    overflow: hidden;
+    padding: 0;
+}
+
+.skeleton-thumbnail {
+    width: 100%;
+    aspect-ratio: 16 / 9;
+    border-radius: 0; /* No radius on the image part */
+}
+
+.skeleton-card-content {
+    padding: 15px;
+}
+
+.skeleton-text {
+    height: 16px;
+    margin-bottom: 10px;
+}
+
+.skeleton-text.short {
+    width: 60%;
 }
