@@ -44,6 +44,22 @@ h1 {
     margin: 0;
 }
 
+/* --- Login Page Header --- */
+.login-header {
+    text-align: center;
+    margin-bottom: 30px;
+}
+
+.login-header h1 {
+    margin-bottom: 5px; /* Creates a small gap between title and subtitle */
+}
+
+.login-header p {
+    margin-top: 0; /* Removes default paragraph top margin */
+    color: #aaa;
+}
+/* --- End Login Page Header --- */
+
 label {
     display: block;
     margin-bottom: 8px;
