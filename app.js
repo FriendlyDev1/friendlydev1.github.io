@@ -4,7 +4,13 @@
 const API_BASE_URL = "https://lustroom-downloader-backend.onrender.com/api/v1";
 
 // --- State and Data Store ---
-let originalContentHTML = null; // Module-level variable for preserving content
+let allPlatformsData = [];
+let allTiersData = {};
+let currentContentData = null;
+let currentFilterState = { view: 'All', type: 'All', query: '' };
+let searchScope = 'platforms'; // Tracks search scope: 'platforms', 'tiers', or 'content'
+const userPlatformId = localStorage.getItem('user_platform_id');
+const userName = localStorage.getItem('user_name');
 
 // --- Logic for login.html ---
 if (document.getElementById('loginForm')) {
@@ -86,14 +92,8 @@ if (document.getElementById('loginForm')) {
 if (document.getElementById('appContainer')) {
     const mainContent = document.getElementById('mainContent');
     const logoutButton = document.getElementById('logoutButton');
-    
-    // --- State and Data Store ---
-    let allPlatformsData = [];
-    let allTiersData = {};
-    let currentContentData = null;
-    let currentFilterState = { view: 'All', type: 'All', query: '' };
-    const userPlatformId = localStorage.getItem('user_platform_id');
-    const userName = localStorage.getItem('user_name');
+    const searchContainer = document.getElementById('searchContainer');
+    const searchInput = document.getElementById('searchInput');
 
     // --- Utility Functions ---
     function isTokenValid() {
@@ -142,32 +142,38 @@ if (document.getElementById('appContainer')) {
             .some(link => isRecent(link.added_at));
     }
 
-    // --- Reattach copy button listeners ---
-    function reattachCopyButtonListeners() {
-        document.querySelectorAll('.copy-btn').forEach(button => {
-            const newButton = button.cloneNode(true);
-            button.parentNode.replaceChild(newButton, button);
-        });
-        
-        document.querySelectorAll('.copy-btn').forEach(button => {
-            button.addEventListener('click', () => {
-                const linkCard = button.closest('.link-card');
+    function generateSearchableText(link) {
+        return [
+            link.title || '',
+            link.description || '',
+            link.category || ''
+        ].join(' ').toLowerCase().trim();
+    }
+
+    // --- Event Delegation for Copy Buttons ---
+    function setupCopyButtonDelegation() {
+        const linksContentContainer = document.getElementById('linksContentContainer');
+        if (!linksContentContainer) return;
+
+        linksContentContainer.addEventListener('click', (event) => {
+            if (event.target.classList.contains('copy-btn')) {
+                const linkCard = event.target.closest('.link-card');
                 const linkElement = linkCard.querySelector('h3 a');
                 const url = linkElement ? linkElement.href : '';
-                
+
                 if (url && url !== '#') {
                     navigator.clipboard.writeText(url).then(() => {
-                        button.textContent = 'Copied! ✓';
-                        button.classList.add('copied');
+                        event.target.textContent = 'Copied! ✓';
+                        event.target.classList.add('copied');
                         setTimeout(() => {
-                            button.textContent = 'Copy Link';
-                            button.classList.remove('copied');
+                            event.target.textContent = 'Copy Link';
+                            event.target.classList.remove('copied');
                         }, 2000);
                     }).catch(err => {
                         console.error('Failed to copy:', err);
                     });
                 }
-            });
+            }
         });
     }
 
@@ -188,13 +194,49 @@ if (document.getElementById('appContainer')) {
     function handleSearchInput(event) {
         const query = event.target.value.toLowerCase().trim();
         currentFilterState.query = query;
-        
+
         const emptyMessage = document.getElementById('searchEmptyMessage');
         if (emptyMessage && query === '') {
             emptyMessage.remove();
         }
-        
-        applyFilters();
+
+        if (searchScope === 'tiers') {
+            handleTierLevelSearch(query);
+        } else {
+            applyFilters();
+        }
+    }
+
+    // --- Tier-level search ---
+    async function handleTierLevelSearch(query) {
+        const urlParams = new URLSearchParams(window.location.search);
+        const platformId = urlParams.get('platform_id');
+        if (!platformId) return;
+
+        try {
+            const tiers = await ensureTiersData(platformId);
+            const token = localStorage.getItem('lustroom_jwt');
+            let allContent = {};
+
+            // Fetch content for each tier
+            for (const tier of tiers) {
+                const response = await fetch(`${API_BASE_URL}/get_patron_links?tier_id=${tier.id}`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                const data = await response.json();
+                if (response.ok && data.status === 'success' && data.content) {
+                    allContent[tier.name] = data.content[tier.name] || [];
+                }
+            }
+
+            // Render content with search applied
+            renderContent(allContent, platformId);
+            currentFilterState.query = query; // Ensure query is preserved
+            applyFilters();
+        } catch (error) {
+            console.error('Tier-level search error:', error);
+            displayError('Failed to perform tier-level search.');
+        }
     }
 
     // --- Async Guard Functions for Data Caching ---
@@ -202,10 +244,10 @@ if (document.getElementById('appContainer')) {
         if (allPlatformsData.length > 0) {
             return Promise.resolve(allPlatformsData);
         }
-        
+
         const response = await fetch(`${API_BASE_URL}/platforms`);
         const data = await response.json();
-        
+
         if (response.ok && data.status === 'success' && data.platforms) {
             allPlatformsData = data.platforms;
             return allPlatformsData;
@@ -218,13 +260,13 @@ if (document.getElementById('appContainer')) {
         if (allTiersData[platformId]) {
             return Promise.resolve(allTiersData[platformId]);
         }
-        
+
         const token = localStorage.getItem('lustroom_jwt');
         const response = await fetch(`${API_BASE_URL}/platforms/${platformId}/tiers`, {
             headers: { 'Authorization': `Bearer ${token}` }
         });
         const data = await response.json();
-        
+
         if (response.ok && data.status === 'success' && data.tiers) {
             allTiersData[platformId] = data.tiers;
             return allTiersData[platformId];
@@ -241,7 +283,7 @@ if (document.getElementById('appContainer')) {
         }
         skeletonHTML += '</div>';
         mainContent.innerHTML = skeletonHTML;
-        document.getElementById('searchContainer').style.display = 'none';
+        searchContainer.style.display = 'none';
     }
 
     function renderTierSkeleton(platformName) {
@@ -256,7 +298,8 @@ if (document.getElementById('appContainer')) {
         }
         skeletonHTML += '</div>';
         mainContent.innerHTML = skeletonHTML;
-        document.getElementById('searchContainer').style.display = 'none';
+        searchContainer.style.display = 'block';
+        searchInput.placeholder = `Search in ${platformName || 'Tiers'}`;
         addBackButtonListener('platforms');
     }
 
@@ -270,9 +313,8 @@ if (document.getElementById('appContainer')) {
             skeletonHTML += `<div class="tier-group"><div class="skeleton skeleton-title"></div><div class="skeleton-card"><div class="skeleton skeleton-thumbnail"></div><div class="skeleton-card-content"><div class="skeleton skeleton-text"></div><div class="skeleton skeleton-text short"></div></div></div></div>`;
         }
         mainContent.innerHTML = skeletonHTML;
-        document.getElementById('searchContainer').style.display = 'block';
-        const searchInput = document.getElementById('searchInput');
-        if (searchInput) searchInput.value = '';
+        searchContainer.style.display = 'block';
+        searchInput.placeholder = `Search in ${tierName || 'Content'}`;
         const urlParams = new URLSearchParams(window.location.search);
         addBackButtonListener('tiers', urlParams.get('platform_id'));
     }
@@ -284,7 +326,7 @@ if (document.getElementById('appContainer')) {
         document.getElementById('modalImage').src = platform.thumbnail_url || '';
         document.getElementById('modalTitle').textContent = platform.name;
         document.getElementById('modalDescription').textContent = platform.description;
-        
+
         const teaserContainer = document.getElementById('modalTeaserContainer');
         if (platform.teaser_video_urls && platform.teaser_video_urls.length > 0) {
             const randomTeaser = platform.teaser_video_urls[Math.floor(Math.random() * platform.teaser_video_urls.length)];
@@ -306,7 +348,7 @@ if (document.getElementById('appContainer')) {
                 socialsContainer.appendChild(link);
             }
         }
-        
+
         document.getElementById('modalContact').innerHTML = platform.contact_info_html || '<p>Contact the provider for access details.</p>';
         platformModal.style.display = 'block';
     }
@@ -319,7 +361,7 @@ if (document.getElementById('appContainer')) {
             }
         }
     }
-    
+
     document.querySelectorAll('.modal-close-btn').forEach(btn => {
         btn.onclick = () => hideModal(btn.closest('.modal'));
     });
@@ -343,18 +385,18 @@ if (document.getElementById('appContainer')) {
         if (userName) {
             welcomeHTML = `<div class="welcome-message">Welcome back, ${userName}!</div>`;
         }
-        
+
         mainContent.innerHTML = welcomeHTML + '<h2>Platforms</h2>' + platformsHTML;
-        document.getElementById('searchContainer').style.display = 'none';
+        searchContainer.style.display = 'none';
         mainContent.querySelector('.platforms-grid').addEventListener('click', handlePlatformClick);
     }
-    
+
     function renderTiers(tiers, platformId, platformName) {
         if (!tiers || !Array.isArray(tiers)) {
             displayError("No tiers data available for this platform.");
             return;
         }
-        
+
         let tiersHTML = `
             <div class="view-header">
                 <button id="backButton" class="back-button">← Back to Platforms</button>
@@ -366,26 +408,30 @@ if (document.getElementById('appContainer')) {
         });
         tiersHTML += '</div>';
         mainContent.innerHTML = tiersHTML;
-        document.getElementById('searchContainer').style.display = 'none';
+        searchContainer.style.display = 'block';
+        searchInput.placeholder = `Search in ${platformName || 'Tiers'}`;
+        searchInput.value = '';
+        currentFilterState.query = '';
         mainContent.querySelector('.tiers-grid').addEventListener('click', (e) => handleTierClick(e, platformId));
         addBackButtonListener('platforms');
     }
 
     function fetchAndDisplayTiers(platformId, platformName) {
+        searchScope = 'tiers';
         const tiersData = allTiersData[platformId];
-        
+
         if (!tiersData || !Array.isArray(tiersData)) {
             console.error('Tiers data not found for platform:', platformId, 'Available data:', allTiersData);
             displayError("Unable to load tiers for this platform.");
             return;
         }
-        
+
         renderTiers(tiersData, platformId, platformName);
     }
 
     // --- Content View Logic ---
     async function fetchAndDisplayContent(platformId, tierId, tierName, platformName) {
-        originalContentHTML = null; // Reset when navigating to new content
+        searchScope = 'content';
         renderContentSkeleton(tierName, platformName);
         try {
             const token = localStorage.getItem('lustroom_jwt');
@@ -396,7 +442,7 @@ if (document.getElementById('appContainer')) {
             if (response.ok && data.status === 'success' && data.content) {
                 currentContentData = data.content;
                 currentFilterState = { view: 'All', type: 'All', query: '' };
-                
+
                 mainContent.innerHTML = `
                     <div class="view-header">
                         <button id="backButton" class="back-button">← Back to Tiers</button>
@@ -404,17 +450,16 @@ if (document.getElementById('appContainer')) {
                     </div>
                     <div id="filterContainer" class="filter-container"></div>
                     <div id="linksContentContainer"></div>`;
-                
+
                 const linksContentContainer = document.getElementById('linksContentContainer');
-                document.getElementById('searchContainer').style.display = 'block';
-                const searchInput = document.getElementById('searchInput');
-                if (searchInput) {
-                    searchInput.value = '';
-                    searchInput.addEventListener('input', debounce(handleSearchInput, 300));
-                }
+                searchContainer.style.display = 'block';
+                searchInput.placeholder = `Search in ${tierName || 'Content'}`;
+                searchInput.value = '';
+                searchInput.addEventListener('input', debounce(handleSearchInput, 300));
                 addBackButtonListener('tiers', platformId);
-                renderContent(data.content);
+                renderContent(data.content, platformId);
                 setupFilters(data.content);
+                setupCopyButtonDelegation();
             } else if (response.status === 401 || response.status === 403) {
                 localStorage.clear();
                 window.location.href = 'login.html';
@@ -427,7 +472,7 @@ if (document.getElementById('appContainer')) {
         }
     }
 
-    function renderContent(contentData) {
+    function renderContent(contentData, platformId) {
         const linksContentContainer = document.getElementById('linksContentContainer');
         if (!linksContentContainer) return;
         linksContentContainer.innerHTML = '';
@@ -444,7 +489,7 @@ if (document.getElementById('appContainer')) {
             links.forEach(link => {
                 const isRecentContent = isRecent(link.added_at);
                 console.log(`Render: Link "${link.title}" - Recent: ${isRecentContent}, Added: ${link.added_at}`);
-                
+
                 const card = document.createElement('div');
                 card.className = 'link-card';
                 if (link.locked) card.classList.add('locked');
@@ -453,7 +498,11 @@ if (document.getElementById('appContainer')) {
                     console.log(`Applied is-new class to "${link.title}"`);
                 }
                 card.dataset.contentType = link.content_type || 'Video';
-                
+                card.dataset.recentStatus = isRecentContent ? 'true' : 'false';
+                card.dataset.searchText = generateSearchableText(link);
+                card.dataset.tierName = tierName;
+                card.dataset.platformId = platformId;
+
                 // Thumbnail section (if present)
                 if (link.thumbnail_url) {
                     const thumbnailContainer = document.createElement('div');
@@ -472,10 +521,10 @@ if (document.getElementById('appContainer')) {
                     thumbnailContainer.appendChild(thumbnailImage);
                     card.appendChild(thumbnailContainer);
                 }
-                
+
                 const cardContent = document.createElement('div');
                 cardContent.className = 'card-content';
-                
+
                 // Title section with text-based badge for recent items without thumbnails
                 const title = document.createElement('h3');
                 const titleLink = document.createElement('a');
@@ -492,13 +541,13 @@ if (document.getElementById('appContainer')) {
                     console.log(`Added text badge to "${link.title}" with text: ${newBadgeText.textContent}`);
                 }
                 cardContent.appendChild(title);
-                
+
                 if (link.description) {
                     const description = document.createElement('p');
                     description.textContent = link.description;
                     cardContent.appendChild(description);
                 }
-                
+
                 const metaInfo = document.createElement('div');
                 metaInfo.className = 'meta-info';
                 if (link.category) {
@@ -507,7 +556,7 @@ if (document.getElementById('appContainer')) {
                     metaInfo.appendChild(categorySpan);
                 }
                 cardContent.appendChild(metaInfo);
-                
+
                 if (!link.locked) {
                     const actionsContainer = document.createElement('div');
                     actionsContainer.className = 'card-actions';
@@ -517,7 +566,7 @@ if (document.getElementById('appContainer')) {
                     actionsContainer.appendChild(copyButton);
                     cardContent.appendChild(actionsContainer);
                 }
-                
+
                 card.appendChild(cardContent);
                 tierGroup.appendChild(card);
             });
@@ -527,42 +576,38 @@ if (document.getElementById('appContainer')) {
         if (!hasVisibleContent) {
             linksContentContainer.innerHTML = `<p class="empty-tier-message">No content matches your search/filter criteria.</p>`;
         }
-        if (linksContentContainer && hasVisibleContent) {
-            originalContentHTML = linksContentContainer.innerHTML;
-            reattachCopyButtonListeners();
-        }
     }
 
     // --- Setup filters with Recently Added support ---
     function setupFilters(contentData) {
         const filterContainer = document.getElementById('filterContainer');
         if (!filterContainer) return;
-        
+
         const contentTypes = new Set();
         Object.values(contentData).flat().forEach(link => contentTypes.add(link.content_type || 'Video'));
-        
+
         const hasRecent = hasRecentContent(contentData);
-        
+
         if (contentTypes.size <= 1 && !hasRecent) {
             filterContainer.style.display = 'none';
             return;
         }
-        
+
         filterContainer.style.display = 'block';
         filterContainer.innerHTML = '';
-        
+
         const viewFiltersRow = document.createElement('div');
         viewFiltersRow.className = 'filter-row view-filters';
         const typeFiltersRow = document.createElement('div');
         typeFiltersRow.className = 'filter-row type-filters';
-        
+
         const allViewButton = document.createElement('button');
         allViewButton.className = 'filter-btn view-filter active';
         allViewButton.textContent = 'All Content';
         allViewButton.dataset.filter = 'All';
         allViewButton.dataset.filterType = 'view';
         viewFiltersRow.appendChild(allViewButton);
-        
+
         if (hasRecent) {
             const recentButton = document.createElement('button');
             recentButton.className = 'filter-btn view-filter';
@@ -571,7 +616,7 @@ if (document.getElementById('appContainer')) {
             recentButton.dataset.filterType = 'view';
             viewFiltersRow.appendChild(recentButton);
         }
-        
+
         if (contentTypes.size > 1) {
             const allTypeButton = document.createElement('button');
             allTypeButton.className = 'filter-btn type-filter active';
@@ -579,7 +624,7 @@ if (document.getElementById('appContainer')) {
             allTypeButton.dataset.filter = 'All';
             allTypeButton.dataset.filterType = 'type';
             typeFiltersRow.appendChild(allTypeButton);
-            
+
             contentTypes.forEach(type => {
                 const button = document.createElement('button');
                 button.className = 'filter-btn type-filter';
@@ -589,22 +634,22 @@ if (document.getElementById('appContainer')) {
                 typeFiltersRow.appendChild(button);
             });
         }
-        
+
         filterContainer.appendChild(viewFiltersRow);
         if (typeFiltersRow.children.length > 0) {
             filterContainer.appendChild(typeFiltersRow);
         }
-        
+
         filterContainer.addEventListener('click', handleFilterClick);
     }
-    
+
     // --- Filter handling with search support ---
     function handleFilterClick(event) {
         if (!event.target.classList.contains('filter-btn')) return;
-        
+
         const filterValue = event.target.dataset.filter;
         const filterType = event.target.dataset.filterType;
-        
+
         if (filterType === 'view') {
             currentFilterState.view = filterValue;
             document.querySelectorAll('.view-filter').forEach(btn => btn.classList.remove('active'));
@@ -612,7 +657,7 @@ if (document.getElementById('appContainer')) {
             currentFilterState.type = filterValue;
             document.querySelectorAll('.type-filter').forEach(btn => btn.classList.remove('active'));
         }
-        
+
         event.target.classList.add('active');
         applyFilters();
     }
@@ -620,40 +665,22 @@ if (document.getElementById('appContainer')) {
     // --- Apply filters with search support ---
     function applyFilters() {
         const { view, type, query } = currentFilterState;
-        
-        if (view === 'All' && type === 'All' && query === '') {
-            const linksContentContainer = document.getElementById('linksContentContainer');
-            if (originalContentHTML && linksContentContainer) {
-                linksContentContainer.innerHTML = originalContentHTML;
-                console.log("Restored HTML:", originalContentHTML.substring(0, 200));
-                console.log("Current cards count:", document.querySelectorAll('.link-card').length);
-                reattachCopyButtonListeners();
-            }
-            return;
-        }
-        
+
         let hasVisibleContent = false;
         const emptyMessage = document.getElementById('searchEmptyMessage');
-        
         if (emptyMessage) {
             emptyMessage.remove();
         }
-        
+
         document.querySelectorAll('.link-card').forEach(card => {
-            const cardText = (
-                (card.querySelector('h3')?.textContent || '') + ' ' +
-                (card.querySelector('p')?.textContent || '') + ' ' +
-                (card.querySelector('.meta-info')?.textContent || '')
-            ).toLowerCase();
-            
-            const isRecentContent = card.classList.contains('is-new');
-            const isViewMatch = (view === 'All') || (view === 'Recent' && isRecentContent);
-            const isTypeMatch = (type === 'All') || (card.dataset.contentType === type);
-            const isQueryMatch = (query === '') || cardText.includes(query);
-            
+            const isRecentContent = card.dataset.recentStatus === 'true';
+            const isViewMatch = view === 'All' || (view === 'Recent' && isRecentContent);
+            const isTypeMatch = type === 'All' || card.dataset.contentType === type;
+            const isQueryMatch = query === '' || card.dataset.searchText.includes(query);
+
             const shouldShow = isViewMatch && isTypeMatch && isQueryMatch;
             card.style.display = shouldShow ? 'block' : 'none';
-            
+
             if (view === 'Recent' && isRecentContent) {
                 card.classList.add('recent-highlight');
                 const badge = card.querySelector('.new-badge') || card.querySelector('.new-badge-text');
@@ -663,16 +690,16 @@ if (document.getElementById('appContainer')) {
             } else {
                 card.classList.remove('recent-highlight');
             }
-            
+
             if (shouldShow) hasVisibleContent = true;
-            console.log(`Filter: Card "${card.querySelector('h3')?.textContent}" - Show: ${shouldShow}, Recent: ${isRecentContent}`);
+            console.log(`Filter: Card "${card.querySelector('h3')?.textContent}" - Show: ${shouldShow}, Recent: ${isRecentContent}, Type: ${card.dataset.contentType}, Query: ${query}`);
         });
-        
+
         document.querySelectorAll('.tier-group').forEach(group => {
             const hasVisibleCards = group.querySelector('.link-card:not([style*="display: none"])');
             group.style.display = hasVisibleCards ? 'block' : 'none';
         });
-        
+
         if (!hasVisibleContent) {
             const linksContentContainer = document.getElementById('linksContentContainer');
             if (linksContentContainer && !document.getElementById('searchEmptyMessage')) {
@@ -704,7 +731,7 @@ if (document.getElementById('appContainer')) {
         const card = event.target.closest('.tier-card');
         if (!card) return;
         const tierId = card.dataset.tierId;
-        
+
         history.pushState({view: 'content', platformId, tierId}, '', `?view=content&platform_id=${platformId}&tier_id=${tierId}`);
         router();
     }
@@ -739,11 +766,11 @@ if (document.getElementById('appContainer')) {
             if (view === 'tiers' || view === 'content') {
                 await ensurePlatformsData();
             }
-            
+
             if (view === 'tiers' && platformId) {
                 await ensureTiersData(platformId);
             }
-            
+
             if (view === 'content') {
                 await ensureTiersData(platformId);
             }
@@ -754,24 +781,38 @@ if (document.getElementById('appContainer')) {
             const tierName = tierData?.name;
 
             if (view === 'content' && platformId && tierId) {
+                searchScope = 'content';
                 fetchAndDisplayContent(platformId, tierId, tierName, platformName);
             } else if (view === 'tiers' && platformId) {
+                searchScope = 'tiers';
                 renderTierSkeleton(platformName);
                 fetchAndDisplayTiers(platformId, platformName);
             } else {
+                searchScope = 'platforms';
                 renderPlatformSkeleton();
                 const platformsData = await ensurePlatformsData();
                 renderPlatforms(platformsData);
+            }
+
+            // Reset search input and filters when navigating
+            if (searchInput) {
+                searchInput.value = '';
+                currentFilterState.query = '';
             }
         } catch (error) {
             console.error("Router error:", error);
             displayError("An error occurred while loading the page. Please try again.");
         }
     }
-    
-    document.addEventListener('DOMContentLoaded', router);
+
+    document.addEventListener('DOMContentLoaded', () => {
+        router();
+        if (searchInput) {
+            searchInput.addEventListener('input', debounce(handleSearchInput, 300));
+        }
+    });
     window.onpopstate = router;
-    
+
     logoutButton.addEventListener('click', () => {
         localStorage.clear();
         window.location.href = 'login.html';
