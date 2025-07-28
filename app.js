@@ -89,6 +89,8 @@ if (document.getElementById('appContainer')) {
     // --- State and Data Store ---
     let allPlatformsData = [];
     let allTiersData = [];
+    let currentContentData = null; // Store current content for filtering
+    let currentFilterState = { view: 'All', type: 'All' }; // Track both view and type filters
     const userPlatformId = localStorage.getItem('user_platform_id');
     const userName = localStorage.getItem('user_name'); // Get user's name
 
@@ -104,6 +106,27 @@ if (document.getElementById('appContainer')) {
 
     function displayError(message, container = mainContent) {
         container.innerHTML = `<div class="error-message">${message}</div>`;
+    }
+
+    // --- NEW: Date checking utility for recent content ---
+    function isRecent(dateString, daysThreshold = 7) {
+        if (!dateString) return false;
+        try {
+            const contentDate = new Date(dateString);
+            const now = new Date();
+            const thresholdDate = new Date(now.getTime() - (daysThreshold * 24 * 60 * 60 * 1000));
+            return contentDate > thresholdDate;
+        } catch (error) {
+            console.warn('Invalid date string:', dateString);
+            return false;
+        }
+    }
+
+    // --- NEW: Check if any content in the data is recent ---
+    function hasRecentContent(contentData) {
+        return Object.values(contentData)
+            .flat()
+            .some(link => isRecent(link.added_at));
     }
 
     // --- Skeleton Loaders ---
@@ -307,6 +330,9 @@ if (document.getElementById('appContainer')) {
             });
             const data = await response.json();
             if (response.ok && data.status === 'success' && data.content) {
+                currentContentData = data.content; // Store for filtering
+                currentFilterState = { view: 'All', type: 'All' }; // Reset filter state
+                
                 mainContent.innerHTML = `
                     <div class="view-header">
                         <button id="backButton" class="back-button">← Back to Tiers</button>
@@ -345,10 +371,25 @@ if (document.getElementById('appContainer')) {
                 const card = document.createElement('div');
                 card.className = 'link-card';
                 if (link.locked) card.classList.add('locked');
+                
+                // *** NEW: Add new content badge and class ***
+                if (isRecent(link.added_at)) {
+                    card.classList.add('is-new');
+                }
+                
                 card.dataset.contentType = link.content_type || 'Video';
                 if (link.thumbnail_url) {
                     const thumbnailContainer = document.createElement('div');
                     thumbnailContainer.className = 'thumbnail-container';
+                    
+                    // *** NEW: Add "New!" badge to thumbnail ***
+                    if (isRecent(link.added_at)) {
+                        const newBadge = document.createElement('div');
+                        newBadge.className = 'new-badge';
+                        newBadge.textContent = 'New!';
+                        thumbnailContainer.appendChild(newBadge);
+                    }
+                    
                     const thumbnailImage = document.createElement('img');
                     thumbnailImage.src = link.thumbnail_url;
                     thumbnailImage.alt = `Thumbnail for ${link.title}`;
@@ -402,47 +443,122 @@ if (document.getElementById('appContainer')) {
         }
     }
     
+    // *** ENHANCED: Improved filter setup with Recently Added support ***
     function setupFilters(contentData) {
         const filterContainer = document.getElementById('filterContainer');
         if (!filterContainer) return;
+        
+        // Get all content types
         const contentTypes = new Set();
         Object.values(contentData).flat().forEach(link => contentTypes.add(link.content_type || 'Video'));
-        if (contentTypes.size <= 1) {
-             filterContainer.style.display = 'none';
-             return;
+        
+        // Check if we have recent content
+        const hasRecent = hasRecentContent(contentData);
+        
+        // Hide filters if only one type and no recent content
+        if (contentTypes.size <= 1 && !hasRecent) {
+            filterContainer.style.display = 'none';
+            return;
         }
+        
         filterContainer.style.display = 'block';
-        filterContainer.innerHTML = ''; 
-
-        const allButton = document.createElement('button');
-        allButton.className = 'filter-btn active';
-        allButton.textContent = 'All';
-        allButton.dataset.filter = 'All';
-        filterContainer.appendChild(allButton);
-        contentTypes.forEach(type => {
-            const button = document.createElement('button');
-            button.className = 'filter-btn';
-            button.textContent = type;
-            button.dataset.filter = type;
-            filterContainer.appendChild(button);
-        });
+        filterContainer.innerHTML = '';
+        
+        // Create two filter rows
+        const viewFiltersRow = document.createElement('div');
+        viewFiltersRow.className = 'filter-row view-filters';
+        const typeFiltersRow = document.createElement('div');
+        typeFiltersRow.className = 'filter-row type-filters';
+        
+        // View filters (All vs Recently Added)
+        const allViewButton = document.createElement('button');
+        allViewButton.className = 'filter-btn view-filter active';
+        allViewButton.textContent = 'All Content';
+        allViewButton.dataset.filter = 'All';
+        allViewButton.dataset.filterType = 'view';
+        viewFiltersRow.appendChild(allViewButton);
+        
+        if (hasRecent) {
+            const recentButton = document.createElement('button');
+            recentButton.className = 'filter-btn view-filter';
+            recentButton.textContent = 'Recently Added';
+            recentButton.dataset.filter = 'Recent';
+            recentButton.dataset.filterType = 'view';
+            viewFiltersRow.appendChild(recentButton);
+        }
+        
+        // Type filters (only show if more than one type)
+        if (contentTypes.size > 1) {
+            const allTypeButton = document.createElement('button');
+            allTypeButton.className = 'filter-btn type-filter active';
+            allTypeButton.textContent = 'All Types';
+            allTypeButton.dataset.filter = 'All';
+            allTypeButton.dataset.filterType = 'type';
+            typeFiltersRow.appendChild(allTypeButton);
+            
+            contentTypes.forEach(type => {
+                const button = document.createElement('button');
+                button.className = 'filter-btn type-filter';
+                button.textContent = type;
+                button.dataset.filter = type;
+                button.dataset.filterType = 'type';
+                typeFiltersRow.appendChild(button);
+            });
+        }
+        
+        filterContainer.appendChild(viewFiltersRow);
+        if (typeFiltersRow.children.length > 0) {
+            filterContainer.appendChild(typeFiltersRow);
+        }
+        
         filterContainer.addEventListener('click', handleFilterClick);
     }
     
+    // *** ENHANCED: Improved filter handling with dual-state support ***
     function handleFilterClick(event) {
         if (!event.target.classList.contains('filter-btn')) return;
+        
         const filterValue = event.target.dataset.filter;
-        document.querySelectorAll('.filter-btn').forEach(btn => btn.classList.remove('active'));
+        const filterType = event.target.dataset.filterType;
+        
+        if (filterType === 'view') {
+            // Update view filter state
+            currentFilterState.view = filterValue;
+            document.querySelectorAll('.view-filter').forEach(btn => btn.classList.remove('active'));
+        } else if (filterType === 'type') {
+            // Update type filter state
+            currentFilterState.type = filterValue;
+            document.querySelectorAll('.type-filter').forEach(btn => btn.classList.remove('active'));
+        }
+        
         event.target.classList.add('active');
-        applyFilter(filterValue);
+        applyFilters();
     }
 
-    function applyFilter(filter) {
+    // *** ENHANCED: Combined filter application with dual-state support ***
+    function applyFilters() {
+        const { view, type } = currentFilterState;
+        
         document.querySelectorAll('.link-card').forEach(card => {
-            card.style.display = (filter === 'All' || card.dataset.contentType === filter) ? 'block' : 'none';
+            let shouldShow = true;
+            
+            // Apply view filter (All vs Recent)
+            if (view === 'Recent') {
+                shouldShow = shouldShow && card.classList.contains('is-new');
+            }
+            
+            // Apply type filter (All vs specific content type)
+            if (type !== 'All') {
+                shouldShow = shouldShow && (card.dataset.contentType === type);
+            }
+            
+            card.style.display = shouldShow ? 'block' : 'none';
         });
+        
+        // Show/hide tier groups based on visible cards
         document.querySelectorAll('.tier-group').forEach(group => {
-            group.style.display = group.querySelector('.link-card:not([style*="display: none"])') ? 'block' : 'none';
+            const hasVisibleCards = group.querySelector('.link-card:not([style*="display: none"])');
+            group.style.display = hasVisibleCards ? 'block' : 'none';
         });
     }
 
