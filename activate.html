@@ -50,6 +50,7 @@
             color: #e0e0e0;
             font-size: 1em;
             transition: border-color 0.3s, box-shadow 0.3s;
+            box-sizing: border-box; /* Added for consistency */
         }
         .form-control:focus {
             outline: none;
@@ -91,6 +92,15 @@
             background-color: #dc3545;
             color: white;
         }
+        .footer-link { /* Added for the new link */
+            text-align: center;
+            font-size: 0.8em;
+            color: #777;
+            margin-top: 25px;
+        }
+        .footer-link a {
+            color: #00aaff;
+        }
     </style>
 </head>
 <body>
@@ -101,7 +111,6 @@
                 <label for="activation-code">Activation Code</label>
                 <input type="text" id="activation-code" class="form-control" name="activation_code" required placeholder="ACT-XXXXXXXXXXXX">
             </div>
-            <!-- NEW: Name Field -->
             <div class="form-group">
                 <label for="name">Your Name (as on purchase)</label>
                 <input type="text" id="name" class="form-control" name="name" required placeholder="John Doe">
@@ -119,6 +128,11 @@
             </div>
         </form>
         <div id="message-container" class="message"></div>
+
+        <!-- *** NEW: Back to Login link *** -->
+        <p class="footer-link">
+            Already have an account? <a href="login.html">Log in here</a>.
+        </p>
     </div>
     
     <script src="activation.js"></script>

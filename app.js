@@ -5,7 +5,6 @@ const API_BASE_URL = "https://lustroom-downloader-backend.onrender.com/api/v1";
 
 // --- Logic for login.html ---
 if (document.getElementById('loginForm')) {
-    // ... (This section is unchanged as it was already correct)
     const loginForm = document.getElementById('loginForm');
     const emailInput = document.getElementById('email');
     const passwordInput = document.getElementById('password');
@@ -40,8 +39,14 @@ if (document.getElementById('loginForm')) {
                 localStorage.setItem('lustroom_jwt_expires_in', data.expires_in);
                 localStorage.setItem('lustroom_jwt_obtained_at', Math.floor(Date.now() / 1000));
                 
-                if (data.user_info && data.user_info.platform_id) {
-                    localStorage.setItem('user_platform_id', data.user_info.platform_id);
+                if (data.user_info) {
+                    if (data.user_info.platform_id) {
+                        localStorage.setItem('user_platform_id', data.user_info.platform_id);
+                    }
+                    // *** NEW: Store user's name for personalization ***
+                    if (data.user_info.name) {
+                        localStorage.setItem('user_name', data.user_info.name);
+                    }
                 }
 
                 window.location.href = 'links.html';
@@ -85,6 +90,7 @@ if (document.getElementById('appContainer')) {
     let allPlatformsData = [];
     let allTiersData = [];
     const userPlatformId = localStorage.getItem('user_platform_id');
+    const userName = localStorage.getItem('user_name'); // Get user's name
 
     // --- Utility Functions ---
     function isTokenValid() {
@@ -122,7 +128,7 @@ if (document.getElementById('appContainer')) {
         }
         skeletonHTML += '</div>';
         mainContent.innerHTML = skeletonHTML;
-        addBackButtonListener('platforms'); // Add listener for the back button
+        addBackButtonListener('platforms');
     }
 
     function renderContentSkeleton(tierName, platformName) {
@@ -136,7 +142,7 @@ if (document.getElementById('appContainer')) {
         }
         mainContent.innerHTML = skeletonHTML;
         const urlParams = new URLSearchParams(window.location.search);
-        addBackButtonListener('tiers', urlParams.get('platform_id')); // Add listener for the back button
+        addBackButtonListener('tiers', urlParams.get('platform_id'));
     }
 
     // --- Modal Logic ---
@@ -211,13 +217,20 @@ if (document.getElementById('appContainer')) {
     }
 
     function renderPlatforms(platforms) {
-        let platformsHTML = '<h2>Platforms</h2><div class="platforms-grid">';
+        let platformsHTML = '<div class="platforms-grid">';
         platforms.forEach(platform => {
             const isLocked = platform.id.toString() !== userPlatformId;
             platformsHTML += `<div class="platform-card ${isLocked ? 'locked' : ''}" data-platform-id="${platform.id}"><div class="platform-thumbnail" style="background-image: url('${platform.thumbnail_url || ''}')"></div><div class="platform-name">${platform.name}</div>${isLocked ? '<div class="lock-icon">🔒</div>' : ''}</div>`;
         });
         platformsHTML += '</div>';
-        mainContent.innerHTML = platformsHTML;
+
+        // *** NEW: Prepend the welcome message ***
+        let welcomeHTML = '';
+        if (userName) {
+            welcomeHTML = `<div class="welcome-message">Welcome back, ${userName}!</div>`;
+        }
+        
+        mainContent.innerHTML = welcomeHTML + '<h2>Platforms</h2>' + platformsHTML;
         mainContent.querySelector('.platforms-grid').addEventListener('click', handlePlatformClick);
     }
     
@@ -276,11 +289,12 @@ if (document.getElementById('appContainer')) {
         const card = event.target.closest('.tier-card');
         if (!card) return;
         const tierId = card.dataset.tierId;
-        const tierData = allTiersData.find(t => t.id.toString() === tierId);
         
         history.pushState({view: 'content', platformId, tierId}, '', `?view=content&platform_id=${platformId}&tier_id=${tierId}`);
         const platformName = allPlatformsData.find(p => p.id.toString() === platformId)?.name;
-        fetchAndDisplayContent(platformId, tierId, tierData.name, platformName);
+        const tierData = allTiersData.find(t => t.id.toString() === tierId);
+        const tierName = tierData?.name;
+        fetchAndDisplayContent(platformId, tierId, tierName, platformName);
     }
 
     // --- Content View Logic ---
@@ -288,7 +302,6 @@ if (document.getElementById('appContainer')) {
         renderContentSkeleton(tierName, platformName);
         try {
             const token = localStorage.getItem('lustroom_jwt');
-            // *** FIX: Append tier_id to the API call ***
             const response = await fetch(`${API_BASE_URL}/get_patron_links?tier_id=${tierId}`, {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
@@ -323,19 +336,16 @@ if (document.getElementById('appContainer')) {
             linksContentContainer.innerHTML = `<p class="empty-tier-message">This tier has no content yet. Check back soon!</p>`;
             return;
         }
-
         for (const tierName in contentData) {
             const links = contentData[tierName];
             if (links.length === 0) continue;
             const tierGroup = document.createElement('div');
             tierGroup.className = 'tier-group';
-            // We don't need the tier title here anymore since we are viewing one tier at a time
             links.forEach(link => {
                 const card = document.createElement('div');
                 card.className = 'link-card';
                 if (link.locked) card.classList.add('locked');
                 card.dataset.contentType = link.content_type || 'Video';
-
                 if (link.thumbnail_url) {
                     const thumbnailContainer = document.createElement('div');
                     thumbnailContainer.className = 'thumbnail-container';
@@ -346,7 +356,6 @@ if (document.getElementById('appContainer')) {
                     thumbnailContainer.appendChild(thumbnailImage);
                     card.appendChild(thumbnailContainer);
                 }
-
                 const cardContent = document.createElement('div');
                 cardContent.className = 'card-content';
                 const title = document.createElement('h3');
@@ -365,7 +374,7 @@ if (document.getElementById('appContainer')) {
                 const metaInfo = document.createElement('div');
                 metaInfo.className = 'meta-info';
                 if (link.category) { 
-                    const categorySpan = document.createElement('span');
+                     const categorySpan = document.createElement('span');
                     categorySpan.innerHTML = `<strong>Category:</strong> ${link.category}`;
                     metaInfo.appendChild(categorySpan);
                 }
@@ -377,7 +386,7 @@ if (document.getElementById('appContainer')) {
                     copyButton.className = 'copy-btn';
                     copyButton.textContent = 'Copy Link';
                     copyButton.addEventListener('click', () => { 
-                        navigator.clipboard.writeText(link.url).then(() => {
+                         navigator.clipboard.writeText(link.url).then(() => {
                             copyButton.textContent = 'Copied! ✓';
                             copyButton.classList.add('copied');
                             setTimeout(() => { copyButton.textContent = 'Copy Link'; copyButton.classList.remove('copied'); }, 2000);
@@ -437,16 +446,14 @@ if (document.getElementById('appContainer')) {
         });
     }
 
-    // *** NEW: Dynamic Back Button Handler ***
     function addBackButtonListener(backTo, platformId = null) {
         const backButton = document.getElementById('backButton');
         if (!backButton) return;
-
         backButton.onclick = () => {
             if (backTo === 'tiers') {
                 history.pushState({view: 'tiers', platformId}, '', `?view=tiers&platform_id=${platformId}`);
                 router();
-            } else { // 'platforms'
+            } else {
                 history.pushState({view: 'platforms'}, '', `links.html`);
                 router();
             }
@@ -459,18 +466,14 @@ if (document.getElementById('appContainer')) {
             window.location.href = 'login.html';
             return;
         }
-
         const urlParams = new URLSearchParams(window.location.search);
         const view = urlParams.get('view');
         const platformId = urlParams.get('platform_id');
         const tierId = urlParams.get('tier_id');
-        
-        // Find names from stored data to pass to render functions
         const platformData = allPlatformsData.find(p => p.id.toString() === platformId);
         const platformName = platformData?.name;
         const tierData = allTiersData.find(t => t.id.toString() === tierId);
         const tierName = tierData?.name;
-
         if (view === 'content' && platformId && tierId) {
             fetchAndDisplayContent(platformId, tierId, tierName, platformName);
         } else if (view === 'tiers' && platformId) {
