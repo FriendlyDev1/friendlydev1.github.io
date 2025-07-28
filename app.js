@@ -86,9 +86,9 @@ if (document.getElementById('appContainer')) {
     const mainContent = document.getElementById('mainContent');
     const logoutButton = document.getElementById('logoutButton');
     
-    // --- State and Data Store ---
+    // --- State and Data Store (Modified: allTiersData is now an object/map) ---
     let allPlatformsData = [];
-    let allTiersData = [];
+    let allTiersData = {}; // Changed from array to object for per-platform caching
     let currentContentData = null; // Store current content for filtering
     let currentFilterState = { view: 'All', type: 'All' }; // Track both view and type filters
     const userPlatformId = localStorage.getItem('user_platform_id');
@@ -127,6 +127,46 @@ if (document.getElementById('appContainer')) {
         return Object.values(contentData)
             .flat()
             .some(link => isRecent(link.added_at));
+    }
+
+    // --- STEP 1: Async Guard Functions for Data Caching ---
+    async function ensurePlatformsData() {
+        // Check if data is already cached
+        if (allPlatformsData.length > 0) {
+            return Promise.resolve(allPlatformsData);
+        }
+        
+        // Fetch data if not cached
+        const response = await fetch(`${API_BASE_URL}/platforms`);
+        const data = await response.json();
+        
+        if (response.ok && data.status === 'success' && data.platforms) {
+            allPlatformsData = data.platforms;
+            return allPlatformsData;
+        } else {
+            throw new Error(data.message || "Failed to fetch platforms.");
+        }
+    }
+
+    async function ensureTiersData(platformId) {
+        // Check if data for this platform is already cached
+        if (allTiersData[platformId]) {
+            return Promise.resolve(allTiersData[platformId]);
+        }
+        
+        // Fetch data if not cached
+        const token = localStorage.getItem('lustroom_jwt');
+        const response = await fetch(`${API_BASE_URL}/platforms/${platformId}/tiers`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        const data = await response.json();
+        
+        if (response.ok && data.status === 'success' && data.tiers) {
+            allTiersData[platformId] = data.tiers;
+            return allTiersData[platformId];
+        } else {
+            throw new Error(data.message || "Failed to fetch tiers.");
+        }
     }
 
     // --- Skeleton Loaders ---
@@ -221,24 +261,7 @@ if (document.getElementById('appContainer')) {
         }
     };
 
-    // --- Platform View Logic ---
-    async function fetchAndDisplayPlatforms() {
-        renderPlatformSkeleton();
-        try {
-            const response = await fetch(`${API_BASE_URL}/platforms`);
-            const data = await response.json();
-            if (response.ok && data.status === 'success' && data.platforms) {
-                allPlatformsData = data.platforms;
-                renderPlatforms(data.platforms);
-            } else {
-                displayError(data.message || "Failed to fetch platforms.");
-            }
-        } catch (error) {
-            console.error("Fetch platforms error:", error);
-            displayError("An error occurred while fetching platforms.");
-        }
-    }
-
+    // --- STEP 3: Simplified View-Rendering Functions (Made "Dumber") ---
     function renderPlatforms(platforms) {
         let platformsHTML = '<div class="platforms-grid">';
         platforms.forEach(platform => {
@@ -257,41 +280,6 @@ if (document.getElementById('appContainer')) {
         mainContent.querySelector('.platforms-grid').addEventListener('click', handlePlatformClick);
     }
     
-    function handlePlatformClick(event) {
-        const card = event.target.closest('.platform-card');
-        if (!card) return;
-        const platformId = card.dataset.platformId;
-        const platformData = allPlatformsData.find(p => p.id.toString() === platformId);
-
-        if (card.classList.contains('locked')) {
-            showPlatformModal(platformData);
-        } else {
-            history.pushState({view: 'tiers', platformId}, '', `?view=tiers&platform_id=${platformId}`);
-            fetchAndDisplayTiers(platformId, platformData.name);
-        }
-    }
-
-    // --- Tiers View Logic ---
-    async function fetchAndDisplayTiers(platformId, platformName) {
-        renderTierSkeleton(platformName);
-        try {
-            const token = localStorage.getItem('lustroom_jwt');
-            const response = await fetch(`${API_BASE_URL}/platforms/${platformId}/tiers`, {
-                headers: { 'Authorization': `Bearer ${token}` }
-            });
-            const data = await response.json();
-            if (response.ok && data.status === 'success' && data.tiers) {
-                allTiersData = data.tiers;
-                renderTiers(data.tiers, platformId, platformName);
-            } else {
-                displayError(data.message || "Failed to fetch tiers.");
-            }
-        } catch (error) {
-            console.error("Fetch tiers error:", error);
-            displayError("An error occurred while fetching tiers.");
-        }
-    }
-
     function renderTiers(tiers, platformId, platformName) {
         let tiersHTML = `
             <div class="view-header">
@@ -308,19 +296,13 @@ if (document.getElementById('appContainer')) {
         addBackButtonListener('platforms');
     }
 
-    function handleTierClick(event, platformId) {
-        const card = event.target.closest('.tier-card');
-        if (!card) return;
-        const tierId = card.dataset.tierId;
-        
-        history.pushState({view: 'content', platformId, tierId}, '', `?view=content&platform_id=${platformId}&tier_id=${tierId}`);
-        const platformName = allPlatformsData.find(p => p.id.toString() === platformId)?.name;
-        const tierData = allTiersData.find(t => t.id.toString() === tierId);
-        const tierName = tierData?.name;
-        fetchAndDisplayContent(platformId, tierId, tierName, platformName);
+    // --- STEP 3: Simplified fetchAndDisplayTiers (no longer fetches, just renders) ---
+    function fetchAndDisplayTiers(platformId, platformName) {
+        const tiersData = allTiersData[platformId]; // Data is guaranteed to be present
+        renderTiers(tiersData, platformId, platformName);
     }
 
-    // --- Content View Logic ---
+    // --- Content View Logic (Still fetches content as it's view-specific, not global metadata) ---
     async function fetchAndDisplayContent(platformId, tierId, tierName, platformName) {
         renderContentSkeleton(tierName, platformName);
         try {
@@ -562,6 +544,30 @@ if (document.getElementById('appContainer')) {
         });
     }
 
+    // --- STEP 4: Updated Navigation Handlers (Only update state and call router) ---
+    function handlePlatformClick(event) {
+        const card = event.target.closest('.platform-card');
+        if (!card) return;
+        const platformId = card.dataset.platformId;
+        const platformData = allPlatformsData.find(p => p.id.toString() === platformId);
+
+        if (card.classList.contains('locked')) {
+            showPlatformModal(platformData);
+        } else {
+            history.pushState({view: 'tiers', platformId}, '', `?view=tiers&platform_id=${platformId}`);
+            router(); // Let router handle the rest
+        }
+    }
+
+    function handleTierClick(event, platformId) {
+        const card = event.target.closest('.tier-card');
+        if (!card) return;
+        const tierId = card.dataset.tierId;
+        
+        history.pushState({view: 'content', platformId, tierId}, '', `?view=content&platform_id=${platformId}&tier_id=${tierId}`);
+        router(); // Let router handle the rest
+    }
+
     function addBackButtonListener(backTo, platformId = null) {
         const backButton = document.getElementById('backButton');
         if (!backButton) return;
@@ -576,26 +582,50 @@ if (document.getElementById('appContainer')) {
         };
     }
 
-    // --- Main Application Router ---
-    function router() {
+    // --- STEP 2: Refactored Main Application Router (Now Async with Data Guards) ---
+    async function router() {
         if (!isTokenValid()) {
             window.location.href = 'login.html';
             return;
         }
-        const urlParams = new URLSearchParams(window.location.search);
-        const view = urlParams.get('view');
-        const platformId = urlParams.get('platform_id');
-        const tierId = urlParams.get('tier_id');
-        const platformData = allPlatformsData.find(p => p.id.toString() === platformId);
-        const platformName = platformData?.name;
-        const tierData = allTiersData.find(t => t.id.toString() === tierId);
-        const tierName = tierData?.name;
-        if (view === 'content' && platformId && tierId) {
-            fetchAndDisplayContent(platformId, tierId, tierName, platformName);
-        } else if (view === 'tiers' && platformId) {
-            fetchAndDisplayTiers(platformId, platformName);
-        } else {
-            fetchAndDisplayPlatforms();
+
+        // Wrap entire router in try-catch for error handling
+        try {
+            const urlParams = new URLSearchParams(window.location.search);
+            const view = urlParams.get('view');
+            const platformId = urlParams.get('platform_id');
+            const tierId = urlParams.get('tier_id');
+
+            // STEP 2: Conditionally await guard functions based on URL parameters
+            if (view === 'tiers' || view === 'content') {
+                await ensurePlatformsData(); // Ensure platforms data is loaded
+            }
+            
+            if (view === 'content') {
+                await ensureTiersData(platformId); // Ensure tiers data for this platform is loaded
+            }
+
+            // STEP 2: Safely get names after awaiting guard functions
+            const platformData = allPlatformsData.find(p => p.id.toString() === platformId);
+            const platformName = platformData?.name;
+            
+            const tierData = allTiersData[platformId]?.find(t => t.id.toString() === tierId);
+            const tierName = tierData?.name;
+
+            // STEP 2: Call rendering functions with safely-retrieved names
+            if (view === 'content' && platformId && tierId) {
+                fetchAndDisplayContent(platformId, tierId, tierName, platformName);
+            } else if (view === 'tiers' && platformId) {
+                renderTierSkeleton(platformName); // Show skeleton with correct platform name
+                fetchAndDisplayTiers(platformId, platformName);
+            } else {
+                renderPlatformSkeleton();
+                const platformsData = await ensurePlatformsData();
+                renderPlatforms(platformsData);
+            }
+        } catch (error) {
+            console.error("Router error:", error);
+            displayError("An error occurred while loading the page. Please try again.");
         }
     }
     
