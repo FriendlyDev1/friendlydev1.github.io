@@ -5,6 +5,7 @@ const API_BASE_URL = "https://lustroom-downloader-backend.onrender.com/api/v1";
 
 // --- Logic for login.html ---
 if (document.getElementById('loginForm')) {
+    // ... (This section is unchanged as it was already correct)
     const loginForm = document.getElementById('loginForm');
     const emailInput = document.getElementById('email');
     const passwordInput = document.getElementById('password');
@@ -35,7 +36,6 @@ if (document.getElementById('loginForm')) {
             showLoading(false);
 
             if (response.ok && data.status === 'success' && data.access_token) {
-                // Store JWT and expiry info
                 localStorage.setItem('lustroom_jwt', data.access_token);
                 localStorage.setItem('lustroom_jwt_expires_in', data.expires_in);
                 localStorage.setItem('lustroom_jwt_obtained_at', Math.floor(Date.now() / 1000));
@@ -91,9 +91,7 @@ if (document.getElementById('appContainer')) {
         const token = localStorage.getItem('lustroom_jwt');
         const obtainedAt = parseInt(localStorage.getItem('lustroom_jwt_obtained_at'), 10);
         const expiresIn = parseInt(localStorage.getItem('lustroom_jwt_expires_in'), 10);
-
         if (!token || isNaN(obtainedAt) || isNaN(expiresIn)) return false;
-        
         const nowInSeconds = Math.floor(Date.now() / 1000);
         return (obtainedAt + expiresIn - 60) > nowInSeconds;
     }
@@ -115,7 +113,7 @@ if (document.getElementById('appContainer')) {
     function renderTierSkeleton(platformName) {
          let skeletonHTML = `
             <div class="view-header">
-                <button class="back-button" onclick="window.history.back()">← Back to Platforms</button>
+                <button id="backButton" class="back-button">← Back to Platforms</button>
                 <h2>${platformName || 'Tiers'}</h2>
             </div>
             <div class="tiers-grid">`;
@@ -124,47 +122,55 @@ if (document.getElementById('appContainer')) {
         }
         skeletonHTML += '</div>';
         mainContent.innerHTML = skeletonHTML;
+        addBackButtonListener('platforms'); // Add listener for the back button
     }
 
-    function renderContentSkeleton(platformName) {
+    function renderContentSkeleton(tierName, platformName) {
         let skeletonHTML = `
             <div class="view-header">
-                 <button class="back-button" onclick="window.history.back()">← Back to Tiers</button>
-                 <h2>${platformName || 'Content'}</h2>
+                 <button id="backButton" class="back-button">← Back to Tiers</button>
+                 <h2>${tierName || 'Content'} <span class="header-breadcrumb">/ ${platformName}</span></h2>
             </div>`;
         for (let i = 0; i < 2; i++) {
             skeletonHTML += `<div class="tier-group"><div class="skeleton skeleton-title"></div><div class="skeleton-card"><div class="skeleton skeleton-thumbnail"></div><div class="skeleton-card-content"><div class="skeleton skeleton-text"></div><div class="skeleton skeleton-text short"></div></div></div></div>`;
         }
         mainContent.innerHTML = skeletonHTML;
+        const urlParams = new URLSearchParams(window.location.search);
+        addBackButtonListener('tiers', urlParams.get('platform_id')); // Add listener for the back button
     }
 
     // --- Modal Logic ---
     const platformModal = document.getElementById('platformModal');
-    const tierModal = document.getElementById('tierModal');
 
     function showPlatformModal(platform) {
-        // ... (this function is unchanged)
-    }
+        document.getElementById('modalImage').src = platform.thumbnail_url || '';
+        document.getElementById('modalTitle').textContent = platform.name;
+        document.getElementById('modalDescription').textContent = platform.description;
+        
+        const teaserContainer = document.getElementById('modalTeaserContainer');
+        if (platform.teaser_video_urls && platform.teaser_video_urls.length > 0) {
+            const randomTeaser = platform.teaser_video_urls[Math.floor(Math.random() * platform.teaser_video_urls.length)];
+            document.getElementById('modalTeaserVideo').src = randomTeaser;
+            teaserContainer.style.display = 'block';
+        } else {
+            teaserContainer.style.display = 'none';
+        }
 
-    function showTierModal(tier, platformId) {
-        document.getElementById('tierModalImage').src = tier.thumbnail_url || '';
-        document.getElementById('tierModalTitle').textContent = tier.name;
-        document.getElementById('tierModalDescription').textContent = tier.description;
+        const socialsContainer = document.getElementById('modalSocials');
+        socialsContainer.innerHTML = '';
+        if (platform.social_links && Object.keys(platform.social_links).length > 0) {
+            for (const [name, url] of Object.entries(platform.social_links)) {
+                const link = document.createElement('a');
+                link.href = url;
+                link.target = '_blank';
+                link.className = 'social-link';
+                link.textContent = name.charAt(0).toUpperCase() + name.slice(1);
+                socialsContainer.appendChild(link);
+            }
+        }
         
-        const viewContentBtn = document.getElementById('tierModalViewContentBtn');
-        
-        // Remove old listeners and add a new one to avoid stacking
-        const newBtn = viewContentBtn.cloneNode(true);
-        viewContentBtn.parentNode.replaceChild(newBtn, viewContentBtn);
-
-        newBtn.onclick = () => {
-            hideModal(tierModal);
-            // Navigate to the content view
-            const platformName = allPlatformsData.find(p => p.id.toString() === platformId)?.name;
-            fetchAndDisplayContent(platformId, platformName);
-        };
-        
-        tierModal.style.display = 'block';
+        document.getElementById('modalContact').innerHTML = platform.contact_info_html || '<p>Contact the provider for access details.</p>';
+        platformModal.style.display = 'block';
     }
 
     function hideModal(modalElement) {
@@ -179,6 +185,7 @@ if (document.getElementById('appContainer')) {
     document.querySelectorAll('.modal-close-btn').forEach(btn => {
         btn.onclick = () => hideModal(btn.closest('.modal'));
     });
+
     window.onclick = function(event) {
         if (event.target.classList.contains('modal')) {
             hideModal(event.target);
@@ -223,7 +230,6 @@ if (document.getElementById('appContainer')) {
         if (card.classList.contains('locked')) {
             showPlatformModal(platformData);
         } else {
-            // Use pushState for SPA-like navigation without full reload
             history.pushState({view: 'tiers', platformId}, '', `?view=tiers&platform_id=${platformId}`);
             fetchAndDisplayTiers(platformId, platformData.name);
         }
@@ -238,7 +244,6 @@ if (document.getElementById('appContainer')) {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
             const data = await response.json();
-
             if (response.ok && data.status === 'success' && data.tiers) {
                 allTiersData = data.tiers;
                 renderTiers(data.tiers, platformId, platformName);
@@ -254,20 +259,17 @@ if (document.getElementById('appContainer')) {
     function renderTiers(tiers, platformId, platformName) {
         let tiersHTML = `
             <div class="view-header">
-                <button class="back-button" onclick="window.history.back()">← Back to Platforms</button>
+                <button id="backButton" class="back-button">← Back to Platforms</button>
                 <h2>${platformName} Tiers</h2>
             </div>
             <div class="tiers-grid">`;
         tiers.forEach(tier => {
-            tiersHTML += `
-                <div class="tier-card" data-tier-id="${tier.id}">
-                    <div class="tier-thumbnail" style="background-image: url('${tier.thumbnail_url || ''}')"></div>
-                    <div class="tier-name">${tier.name}</div>
-                </div>`;
+            tiersHTML += `<div class="tier-card" data-tier-id="${tier.id}"><div class="tier-thumbnail" style="background-image: url('${tier.thumbnail_url || ''}')"></div><div class="tier-name">${tier.name}</div></div>`;
         });
         tiersHTML += '</div>';
         mainContent.innerHTML = tiersHTML;
         mainContent.querySelector('.tiers-grid').addEventListener('click', (e) => handleTierClick(e, platformId));
+        addBackButtonListener('platforms');
     }
 
     function handleTierClick(event, platformId) {
@@ -275,26 +277,31 @@ if (document.getElementById('appContainer')) {
         if (!card) return;
         const tierId = card.dataset.tierId;
         const tierData = allTiersData.find(t => t.id.toString() === tierId);
-        showTierModal(tierData, platformId);
+        
+        history.pushState({view: 'content', platformId, tierId}, '', `?view=content&platform_id=${platformId}&tier_id=${tierId}`);
+        const platformName = allPlatformsData.find(p => p.id.toString() === platformId)?.name;
+        fetchAndDisplayContent(platformId, tierId, tierData.name, platformName);
     }
 
     // --- Content View Logic ---
-    async function fetchAndDisplayContent(platformId, platformName) {
-        renderContentSkeleton(platformName);
+    async function fetchAndDisplayContent(platformId, tierId, tierName, platformName) {
+        renderContentSkeleton(tierName, platformName);
         try {
             const token = localStorage.getItem('lustroom_jwt');
-            const response = await fetch(`${API_BASE_URL}/get_patron_links`, {
+            // *** FIX: Append tier_id to the API call ***
+            const response = await fetch(`${API_BASE_URL}/get_patron_links?tier_id=${tierId}`, {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
             const data = await response.json();
             if (response.ok && data.status === 'success' && data.content) {
                 mainContent.innerHTML = `
                     <div class="view-header">
-                        <button class="back-button" onclick="window.history.back()">← Back to Tiers</button>
-                        <h2>${platformName} Content</h2>
+                        <button id="backButton" class="back-button">← Back to Tiers</button>
+                        <h2>${tierName} <span class="header-breadcrumb">/ ${platformName}</span></h2>
                     </div>
                     <div id="filterContainer" class="filter-container"></div>
                     <div id="linksContentContainer"></div>`;
+                addBackButtonListener('tiers', platformId);
                 renderContent(data.content);
                 setupFilters(data.content);
             } else if (response.status === 401 || response.status === 403) {
@@ -309,23 +316,20 @@ if (document.getElementById('appContainer')) {
     }
 
     function renderContent(contentData) {
-        // This function is the same as the one from the previous completed step.
-        // It renders the tier groups and link cards into the #linksContentContainer.
         const linksContentContainer = document.getElementById('linksContentContainer');
         if (!linksContentContainer) return;
         linksContentContainer.innerHTML = ''; 
+        if (Object.keys(contentData).length === 0) {
+            linksContentContainer.innerHTML = `<p class="empty-tier-message">This tier has no content yet. Check back soon!</p>`;
+            return;
+        }
 
         for (const tierName in contentData) {
             const links = contentData[tierName];
             if (links.length === 0) continue;
-
             const tierGroup = document.createElement('div');
             tierGroup.className = 'tier-group';
-            const tierTitle = document.createElement('h2');
-            tierTitle.className = 'tier-title';
-            tierTitle.textContent = tierName;
-            tierGroup.appendChild(tierTitle);
-
+            // We don't need the tier title here anymore since we are viewing one tier at a time
             links.forEach(link => {
                 const card = document.createElement('div');
                 card.className = 'link-card';
@@ -353,22 +357,19 @@ if (document.getElementById('appContainer')) {
                 titleLink.target = "_blank";
                 title.appendChild(titleLink);
                 cardContent.appendChild(title);
-
                 if (link.description) {
                     const description = document.createElement('p');
                     description.textContent = link.description;
                     cardContent.appendChild(description);
                 }
-                
                 const metaInfo = document.createElement('div');
                 metaInfo.className = 'meta-info';
                 if (link.category) { 
-                     const categorySpan = document.createElement('span');
+                    const categorySpan = document.createElement('span');
                     categorySpan.innerHTML = `<strong>Category:</strong> ${link.category}`;
                     metaInfo.appendChild(categorySpan);
                 }
                 cardContent.appendChild(metaInfo);
-
                 if (!link.locked) {
                     const actionsContainer = document.createElement('div');
                     actionsContainer.className = 'card-actions';
@@ -376,7 +377,7 @@ if (document.getElementById('appContainer')) {
                     copyButton.className = 'copy-btn';
                     copyButton.textContent = 'Copy Link';
                     copyButton.addEventListener('click', () => { 
-                         navigator.clipboard.writeText(link.url).then(() => {
+                        navigator.clipboard.writeText(link.url).then(() => {
                             copyButton.textContent = 'Copied! ✓';
                             copyButton.classList.add('copied');
                             setTimeout(() => { copyButton.textContent = 'Copy Link'; copyButton.classList.remove('copied'); }, 2000);
@@ -385,7 +386,6 @@ if (document.getElementById('appContainer')) {
                     actionsContainer.appendChild(copyButton);
                     cardContent.appendChild(actionsContainer);
                 }
-                
                 card.appendChild(cardContent);
                 tierGroup.appendChild(card);
             });
@@ -398,6 +398,11 @@ if (document.getElementById('appContainer')) {
         if (!filterContainer) return;
         const contentTypes = new Set();
         Object.values(contentData).flat().forEach(link => contentTypes.add(link.content_type || 'Video'));
+        if (contentTypes.size <= 1) {
+             filterContainer.style.display = 'none';
+             return;
+        }
+        filterContainer.style.display = 'block';
         filterContainer.innerHTML = ''; 
 
         const allButton = document.createElement('button');
@@ -405,7 +410,6 @@ if (document.getElementById('appContainer')) {
         allButton.textContent = 'All';
         allButton.dataset.filter = 'All';
         filterContainer.appendChild(allButton);
-
         contentTypes.forEach(type => {
             const button = document.createElement('button');
             button.className = 'filter-btn';
@@ -433,6 +437,22 @@ if (document.getElementById('appContainer')) {
         });
     }
 
+    // *** NEW: Dynamic Back Button Handler ***
+    function addBackButtonListener(backTo, platformId = null) {
+        const backButton = document.getElementById('backButton');
+        if (!backButton) return;
+
+        backButton.onclick = () => {
+            if (backTo === 'tiers') {
+                history.pushState({view: 'tiers', platformId}, '', `?view=tiers&platform_id=${platformId}`);
+                router();
+            } else { // 'platforms'
+                history.pushState({view: 'platforms'}, '', `links.html`);
+                router();
+            }
+        };
+    }
+
     // --- Main Application Router ---
     function router() {
         if (!isTokenValid()) {
@@ -443,10 +463,16 @@ if (document.getElementById('appContainer')) {
         const urlParams = new URLSearchParams(window.location.search);
         const view = urlParams.get('view');
         const platformId = urlParams.get('platform_id');
-        const platformName = allPlatformsData.find(p => p.id.toString() === platformId)?.name;
+        const tierId = urlParams.get('tier_id');
+        
+        // Find names from stored data to pass to render functions
+        const platformData = allPlatformsData.find(p => p.id.toString() === platformId);
+        const platformName = platformData?.name;
+        const tierData = allTiersData.find(t => t.id.toString() === tierId);
+        const tierName = tierData?.name;
 
-        if (view === 'content' && platformId) {
-            fetchAndDisplayContent(platformId, platformName);
+        if (view === 'content' && platformId && tierId) {
+            fetchAndDisplayContent(platformId, tierId, tierName, platformName);
         } else if (view === 'tiers' && platformId) {
             fetchAndDisplayTiers(platformId, platformName);
         } else {
