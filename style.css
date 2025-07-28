@@ -125,7 +125,6 @@ button:disabled {
     padding: 0;         /* Remove padding from the card itself */
 }
 
-/* *** NEW: Thumbnail Styles *** */
 .link-card .thumbnail-container {
     width: 100%;
     aspect-ratio: 16 / 9;
@@ -139,7 +138,6 @@ button:disabled {
     display: block;    /* Removes the small space that can appear under an image */
 }
 
-/* *** NEW: Wrapper for text content to restore padding *** */
 .link-card .card-content {
     padding: 15px;
 }
@@ -149,7 +147,6 @@ button:disabled {
     background-color: #222;
 }
 
-/* *** NEW: Style for blurring locked thumbnails *** */
 .link-card.locked .thumbnail-container img {
     filter: blur(5px) grayscale(60%);
 }
@@ -192,6 +189,37 @@ button:disabled {
 
 .link-card .meta-info span {
     margin-right: 15px;
+}
+
+/* *** NEW: Card Actions Styles *** */
+.card-actions {
+    margin-top: 15px;
+    padding-top: 15px;
+    border-top: 1px solid #3a3a3a;
+    display: flex;
+    justify-content: flex-end; /* Align button to the right */
+}
+
+.copy-btn {
+    background-color: #444;
+    color: #ddd;
+    border: 1px solid #555;
+    padding: 6px 12px;
+    font-size: 0.85em;
+    font-weight: normal;
+    width: auto; /* Override default full-width */
+    border-radius: 5px;
+}
+
+.copy-btn:hover {
+    background-color: #555;
+}
+
+/* Style for the button after successful copy */
+.copy-btn.copied {
+    background-color: #28a745; /* A success green */
+    color: white;
+    border-color: #28a745;
 }
 
 /* Filter styles */

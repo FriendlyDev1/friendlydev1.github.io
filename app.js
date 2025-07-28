@@ -156,19 +156,17 @@ if (document.getElementById('linksContainer')) {
                 
                 card.dataset.contentType = link.content_type || 'Video';
 
-                // *** NEW: Thumbnail Implementation ***
                 if (link.thumbnail_url) {
                     const thumbnailContainer = document.createElement('div');
                     thumbnailContainer.className = 'thumbnail-container';
                     const thumbnailImage = document.createElement('img');
                     thumbnailImage.src = link.thumbnail_url;
                     thumbnailImage.alt = `Thumbnail for ${link.title}`;
-                    thumbnailImage.loading = 'lazy'; // Improves performance for many images
+                    thumbnailImage.loading = 'lazy';
                     thumbnailContainer.appendChild(thumbnailImage);
                     card.appendChild(thumbnailContainer);
                 }
 
-                // *** NEW: Content Wrapper for Padding ***
                 const cardContent = document.createElement('div');
                 cardContent.className = 'card-content';
 
@@ -183,12 +181,12 @@ if (document.getElementById('linksContainer')) {
                 titleLink.textContent = link.title || "Untitled Link";
                 titleLink.target = "_blank";
                 title.appendChild(titleLink);
-                cardContent.appendChild(title); // Append to wrapper
+                cardContent.appendChild(title);
 
                 if (link.description) {
                     const description = document.createElement('p');
                     description.textContent = link.description;
-                    cardContent.appendChild(description); // Append to wrapper
+                    cardContent.appendChild(description);
                 }
                 
                 const metaInfo = document.createElement('div');
@@ -207,9 +205,43 @@ if (document.getElementById('linksContainer')) {
                     dateSpan.innerHTML = `<strong>Date:</strong> ${localDate}`;
                     metaInfo.appendChild(dateSpan);
                 }
-                cardContent.appendChild(metaInfo); // Append to wrapper
+                cardContent.appendChild(metaInfo);
 
-                card.appendChild(cardContent); // Append the whole content wrapper to the card
+                // *** NEW: Copy Button Implementation ***
+                if (!link.locked) {
+                    const actionsContainer = document.createElement('div');
+                    actionsContainer.className = 'card-actions';
+
+                    const copyButton = document.createElement('button');
+                    copyButton.className = 'copy-btn';
+                    copyButton.textContent = 'Copy Link';
+                    copyButton.title = 'Copy content URL to clipboard';
+
+                    copyButton.addEventListener('click', () => {
+                        if (!link.url) return;
+                        navigator.clipboard.writeText(link.url).then(() => {
+                            copyButton.textContent = 'Copied! ✓';
+                            copyButton.classList.add('copied');
+                            copyButton.disabled = true;
+
+                            setTimeout(() => {
+                                copyButton.textContent = 'Copy Link';
+                                copyButton.classList.remove('copied');
+                                copyButton.disabled = false;
+                            }, 2000);
+                        }).catch(err => {
+                            console.error('Failed to copy link: ', err);
+                            copyButton.textContent = 'Copy Failed';
+                             setTimeout(() => {
+                                copyButton.textContent = 'Copy Link';
+                            }, 2000);
+                        });
+                    });
+                    actionsContainer.appendChild(copyButton);
+                    cardContent.appendChild(actionsContainer);
+                }
+                
+                card.appendChild(cardContent);
                 tierGroup.appendChild(card);
             });
 
