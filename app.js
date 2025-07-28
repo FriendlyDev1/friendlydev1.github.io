@@ -281,6 +281,12 @@ if (document.getElementById('appContainer')) {
     }
     
     function renderTiers(tiers, platformId, platformName) {
+        // Add safety check for tiers data
+        if (!tiers || !Array.isArray(tiers)) {
+            displayError("No tiers data available for this platform.");
+            return;
+        }
+        
         let tiersHTML = `
             <div class="view-header">
                 <button id="backButton" class="back-button">← Back to Platforms</button>
@@ -299,6 +305,14 @@ if (document.getElementById('appContainer')) {
     // --- STEP 3: Simplified fetchAndDisplayTiers (no longer fetches, just renders) ---
     function fetchAndDisplayTiers(platformId, platformName) {
         const tiersData = allTiersData[platformId]; // Data is guaranteed to be present
+        
+        // Add safety check
+        if (!tiersData || !Array.isArray(tiersData)) {
+            console.error('Tiers data not found for platform:', platformId, 'Available data:', allTiersData);
+            displayError("Unable to load tiers for this platform.");
+            return;
+        }
+        
         renderTiers(tiersData, platformId, platformName);
     }
 
