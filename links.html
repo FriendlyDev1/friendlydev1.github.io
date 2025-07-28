@@ -3,26 +3,41 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Content Library - The Echo Chamber</title>
+    <title>The Echo Chamber</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <div class="container">
+    <div id="appContainer" class="container">
         <header>
-            <h1>The Echo Chamber</h1>
+            <h1 id="pageTitle">The Echo Chamber</h1>
             <button id="logoutButton">Logout</button>
         </header>
-        
-        <!-- Placeholder for Step 3 -->
-        <div id="filterContainer" class="filter-container">
-             <!-- Filters will be dynamically added by JavaScript -->
-        </div>
-        
-        <div id="loadingMessageLinks" class="loading-message" style="display:none;">Loading Content...</div>
-        <div id="linksErrorMessage" class="error-message" style="display:none;"></div>
-        
-        <div id="linksContainer">
-            <!-- Tier Groups and Link Cards will be dynamically inserted here -->
+
+        <!-- Main content area that will be populated by JavaScript -->
+        <main id="mainContent">
+            <!-- This will hold either the platform grid or the content feed -->
+        </main>
+    </div>
+
+    <!-- Modal for Locked Platforms -->
+    <div id="platformModal" class="modal">
+        <div class="modal-content">
+            <span class="modal-close-btn">×</span>
+            <div id="modalBody">
+                <img id="modalImage" src="" alt="Platform Thumbnail" class="modal-image">
+                <h2 id="modalTitle"></h2>
+                <p id="modalDescription"></p>
+                <div id="modalTeaserContainer" class="modal-teaser">
+                    <h4>Teaser</h4>
+                    <video id="modalTeaserVideo" controls muted playsinline loop></video>
+                </div>
+                <div id="modalSocials" class="modal-socials">
+                    <!-- Social links will be injected here -->
+                </div>
+                <div id="modalContact" class="modal-contact">
+                    <!-- Contact/Access info HTML will be injected here -->
+                </div>
+            </div>
         </div>
     </div>
 

@@ -1,23 +1,32 @@
 body {
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    min-height: 100vh;
     margin: 0;
     background-color: #121212;
     color: #e0e0e0;
 }
 
 .container {
-    max-width: 400px;
+    width: 95%;
+    max-width: 1200px; /* Wider container for platform/content view */
     margin: 20px auto;
-    padding: 40px;
+    padding: 20px 40px;
     background-color: #1e1e1e;
     border-radius: 8px;
     box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
     border: 1px solid #333;
 }
+
+/* Styles for login.html container remain specific */
+body:has(#loginForm) .container {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    max-width: 400px;
+    padding: 40px;
+    margin: auto;
+    min-height: 50vh;
+}
+
 
 header {
     display: flex;
@@ -25,16 +34,14 @@ header {
     align-items: center;
     border-bottom: 1px solid #333;
     padding-bottom: 10px;
-    margin-bottom: 20px;
+    margin-bottom: 30px;
 }
 
 h1 {
-    text-align: center;
     color: #ffffff;
     font-weight: 300;
     letter-spacing: 1px;
-    margin-top: 0;
-    margin-bottom: 30px;
+    margin: 0;
 }
 
 label {
@@ -91,7 +98,7 @@ button:disabled {
 }
 
 #logoutButton {
-    width: auto; /* Override full-width for logout button */
+    width: auto;
     background-color: #dc3545;
 }
 
@@ -107,6 +114,186 @@ button:disabled {
     padding: 10px;
     margin-top: 20px;
     border-radius: 4px;
+}
+
+/* --- Platform Grid Styles --- */
+.platforms-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+    gap: 30px;
+}
+
+.platform-card, .platform-card-skeleton {
+    aspect-ratio: 4 / 5;
+    border-radius: 8px;
+    overflow: hidden;
+    position: relative;
+    cursor: pointer;
+    border: 1px solid #444;
+    background-color: #2a2a2a;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.platform-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.4);
+}
+
+.platform-thumbnail {
+    width: 100%;
+    height: 100%;
+    background-size: cover;
+    background-position: center;
+    transition: transform 0.3s ease;
+}
+
+.platform-card:hover .platform-thumbnail {
+    transform: scale(1.05);
+}
+
+.platform-name {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    padding: 20px 15px;
+    background: linear-gradient(to top, rgba(0,0,0,0.9) 0%, rgba(0,0,0,0) 100%);
+    color: #fff;
+    font-size: 1.2em;
+    font-weight: bold;
+    text-shadow: 1px 1px 3px rgba(0,0,0,0.7);
+}
+
+.platform-card.locked {
+    cursor: pointer; /* Still clickable to open modal */
+}
+
+.platform-card.locked .platform-thumbnail {
+    filter: grayscale(80%);
+}
+
+.lock-icon {
+    position: absolute;
+    top: 15px;
+    right: 15px;
+    font-size: 1.5em;
+    background-color: rgba(0, 0, 0, 0.5);
+    padding: 5px 10px;
+    border-radius: 50%;
+    backdrop-filter: blur(2px);
+}
+
+/* --- Modal Styles --- */
+.modal {
+    display: none;
+    position: fixed;
+    z-index: 1000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    overflow: auto;
+    background-color: rgba(0,0,0,0.8);
+    animation: fadeIn 0.3s;
+}
+
+.modal-content {
+    position: relative;
+    background-color: #2a2a2a;
+    margin: 5% auto;
+    padding: 30px;
+    border: 1px solid #555;
+    width: 90%;
+    max-width: 700px;
+    border-radius: 8px;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.5);
+    animation: slideIn 0.3s;
+}
+
+.modal-close-btn {
+    color: #aaa;
+    position: absolute;
+    top: 10px;
+    right: 20px;
+    font-size: 28px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: color 0.2s;
+}
+
+.modal-close-btn:hover {
+    color: #fff;
+}
+
+.modal-image {
+    width: 100%;
+    max-height: 300px;
+    object-fit: cover;
+    border-radius: 6px;
+    margin-bottom: 20px;
+}
+
+.modal-content h2 {
+    margin-top: 0;
+    color: #00aaff;
+}
+
+.modal-teaser {
+    margin-top: 20px;
+}
+.modal-teaser video {
+    width: 100%;
+    border-radius: 6px;
+}
+
+.modal-socials {
+    margin-top: 20px;
+    padding-top: 15px;
+    border-top: 1px solid #444;
+}
+
+.social-link {
+    display: inline-block;
+    background-color: #333;
+    color: #eee;
+    padding: 8px 16px;
+    margin: 0 10px 10px 0;
+    border-radius: 20px;
+    text-decoration: none;
+    transition: background-color 0.2s;
+}
+
+.social-link:hover {
+    background-color: #007bff;
+}
+
+.modal-contact {
+    margin-top: 15px;
+    background-color: #1e1e1e;
+    padding: 15px;
+    border-radius: 6px;
+    font-size: 0.9em;
+}
+
+.modal-contact a {
+    color: #4dabf7;
+}
+
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+@keyframes slideIn { from { transform: translateY(-30px); opacity: 0 } to { transform: translateY(0); opacity: 1 } }
+
+/* --- Content View (Tiers & Links) Styles --- */
+.tier-group {
+    margin-bottom: 30px;
+    border-left: 3px solid #007bff;
+    padding-left: 20px;
+}
+
+.tier-title {
+    font-size: 1.5em;
+    font-weight: bold;
+    color: #eee;
+    margin-bottom: 15px;
 }
 
 /* Styling for Link Cards */
@@ -125,7 +312,6 @@ button:disabled {
     border-color: #007bff;
     box-shadow: 0 8px 20px rgba(0, 123, 255, 0.15);
 }
-
 
 .link-card .thumbnail-container {
     width: 100%;
@@ -223,7 +409,7 @@ button:disabled {
     border-color: #28a745;
 }
 
-/* Filter styles */
+/* --- Filter Styles --- */
 .filter-container {
     margin-bottom: 20px;
     text-align: center;
@@ -252,21 +438,7 @@ button:disabled {
     font-weight: bold;
 }
 
-/* Tier Group styles */
-.tier-group {
-    margin-bottom: 30px;
-    border-left: 3px solid #007bff;
-    padding-left: 20px;
-}
-
-.tier-title {
-    font-size: 1.5em;
-    font-weight: bold;
-    color: #eee;
-    margin-bottom: 15px;
-}
-
-/* *** NEW: Skeleton Loader Styles *** */
+/* --- Skeleton Loader Styles --- */
 @keyframes pulse-bg {
     0% { background-color: #2a2a2a; }
     50% { background-color: #3a3a3a; }
@@ -278,6 +450,18 @@ button:disabled {
     border-radius: 4px;
 }
 
+.skeleton-platform-thumbnail {
+    width: 100%;
+    height: 85%;
+    border-radius: 0;
+}
+
+.skeleton-platform-title {
+    height: 20px;
+    width: 60%;
+    margin: 10px auto 0 auto;
+}
+
 .skeleton-title {
     height: 30px;
     width: 40%;
@@ -285,7 +469,7 @@ button:disabled {
 }
 
 .skeleton-card {
-    background-color: transparent; /* The card itself has no bg */
+    background-color: #2a2a2a;
     border: 1px solid #444;
     border-radius: 8px;
     margin-bottom: 20px;
@@ -293,21 +477,21 @@ button:disabled {
     padding: 0;
 }
 
-.skeleton-thumbnail {
+.skeleton-card .skeleton-thumbnail {
     width: 100%;
     aspect-ratio: 16 / 9;
-    border-radius: 0; /* No radius on the image part */
+    border-radius: 0;
 }
 
-.skeleton-card-content {
+.skeleton-card .skeleton-card-content {
     padding: 15px;
 }
 
-.skeleton-text {
+.skeleton-card .skeleton-text {
     height: 16px;
     margin-bottom: 10px;
 }
 
-.skeleton-text.short {
+.skeleton-card .skeleton-text.short {
     width: 60%;
 }
