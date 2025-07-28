@@ -115,7 +115,6 @@ if (document.getElementById('linksContainer')) {
                     linksContainer.innerHTML = '<p style="text-align:center; color: #777;">No new content available at the moment.</p>';
                 } else {
                     renderContent(data.content);
-                    // **NEW**: Setup filters after rendering content
                     setupFilters(data.content);
                 }
             } else if (response.status === 401 || response.status === 403) {
@@ -157,6 +156,22 @@ if (document.getElementById('linksContainer')) {
                 
                 card.dataset.contentType = link.content_type || 'Video';
 
+                // *** NEW: Thumbnail Implementation ***
+                if (link.thumbnail_url) {
+                    const thumbnailContainer = document.createElement('div');
+                    thumbnailContainer.className = 'thumbnail-container';
+                    const thumbnailImage = document.createElement('img');
+                    thumbnailImage.src = link.thumbnail_url;
+                    thumbnailImage.alt = `Thumbnail for ${link.title}`;
+                    thumbnailImage.loading = 'lazy'; // Improves performance for many images
+                    thumbnailContainer.appendChild(thumbnailImage);
+                    card.appendChild(thumbnailContainer);
+                }
+
+                // *** NEW: Content Wrapper for Padding ***
+                const cardContent = document.createElement('div');
+                cardContent.className = 'card-content';
+
                 const title = document.createElement('h3');
                 const titleLink = document.createElement('a');
                 
@@ -168,12 +183,12 @@ if (document.getElementById('linksContainer')) {
                 titleLink.textContent = link.title || "Untitled Link";
                 titleLink.target = "_blank";
                 title.appendChild(titleLink);
-                card.appendChild(title);
+                cardContent.appendChild(title); // Append to wrapper
 
                 if (link.description) {
                     const description = document.createElement('p');
                     description.textContent = link.description;
-                    card.appendChild(description);
+                    cardContent.appendChild(description); // Append to wrapper
                 }
                 
                 const metaInfo = document.createElement('div');
@@ -192,7 +207,9 @@ if (document.getElementById('linksContainer')) {
                     dateSpan.innerHTML = `<strong>Date:</strong> ${localDate}`;
                     metaInfo.appendChild(dateSpan);
                 }
-                card.appendChild(metaInfo);
+                cardContent.appendChild(metaInfo); // Append to wrapper
+
+                card.appendChild(cardContent); // Append the whole content wrapper to the card
                 tierGroup.appendChild(card);
             });
 
@@ -200,24 +217,20 @@ if (document.getElementById('linksContainer')) {
         }
     }
 
-    // **NEW**: Function to create and manage filter buttons
     function setupFilters(contentData) {
         const contentTypes = new Set();
-        // Collect all unique content types from the data
         Object.values(contentData).flat().forEach(link => {
             contentTypes.add(link.content_type || 'Video');
         });
 
-        filterContainer.innerHTML = ''; // Clear any existing filters
+        filterContainer.innerHTML = ''; 
 
-        // Create 'All' button first
         const allButton = document.createElement('button');
-        allButton.className = 'filter-btn active'; // Active by default
+        allButton.className = 'filter-btn active';
         allButton.textContent = 'All';
         allButton.dataset.filter = 'All';
         filterContainer.appendChild(allButton);
 
-        // Create buttons for each content type
         contentTypes.forEach(type => {
             const button = document.createElement('button');
             button.className = 'filter-btn';
@@ -226,29 +239,24 @@ if (document.getElementById('linksContainer')) {
             filterContainer.appendChild(button);
         });
 
-        // Add event listener to the container
         filterContainer.addEventListener('click', handleFilterClick);
     }
     
-    // **NEW**: Function to handle clicks on filter buttons
     function handleFilterClick(event) {
         if (!event.target.classList.contains('filter-btn')) {
-            return; // Ignore clicks that are not on a filter button
+            return;
         }
         
         const filterValue = event.target.dataset.filter;
 
-        // Update active state on buttons
         document.querySelectorAll('.filter-btn').forEach(btn => {
             btn.classList.remove('active');
         });
         event.target.classList.add('active');
 
-        // Apply the filter to the content cards
         applyFilter(filterValue);
     }
 
-    // **NEW**: Function to apply the actual show/hide logic
     function applyFilter(filter) {
         const cards = document.querySelectorAll('.link-card');
         cards.forEach(card => {
@@ -259,15 +267,13 @@ if (document.getElementById('linksContainer')) {
             }
         });
 
-        // Hide tier groups that have no visible cards
         const tierGroups = document.querySelectorAll('.tier-group');
         tierGroups.forEach(group => {
-            // Check for any cards inside this group that are not hidden
             const visibleCard = group.querySelector('.link-card:not([style*="display: none"])');
             if (visibleCard) {
-                group.style.display = 'block'; // Show group if it has at least one visible card
+                group.style.display = 'block';
             } else {
-                group.style.display = 'none'; // Hide group if all its cards are hidden
+                group.style.display = 'none';
             }
         });
     }
