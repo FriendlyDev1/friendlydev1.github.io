@@ -451,9 +451,38 @@ button:disabled {
     border: 1px solid rgba(255, 255, 255, 0.2);
 }
 
+.new-badge-text {
+    display: inline-block;
+    background: linear-gradient(135deg, #ff6b35 0%, #f7931e 100%);
+    color: white;
+    padding: 4px 10px;
+    border-radius: 20px;
+    font-size: 0.75em;
+    font-weight: bold;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-left: 10px;
+    box-shadow: 0 2px 8px rgba(255, 107, 53, 0.4);
+    animation: newBadgeBounce 2s ease-in-out infinite;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.recent-highlight .new-badge,
+.recent-highlight .new-badge-text {
+    font-weight: bold;
+    text-shadow: 0 0 5px rgba(255, 107, 53, 0.5);
+    animation: pulse 2s infinite;
+}
+
 @keyframes newBadgeBounce {
     0%, 100% { transform: scale(1); }
     50% { transform: scale(1.05); }
+}
+
+@keyframes pulse {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.1); }
+    100% { transform: scale(1); }
 }
 
 .link-card .card-content {
@@ -650,7 +679,7 @@ button:disabled {
 
 .search-container.has-query #searchInput {
     border-color: #007bff;
-    box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25);
+    box-shadow: 0 0 0 2 ?>px rgba(0, 123, 255, 0.25);
 }
 
 #searchEmptyMessage {
@@ -739,7 +768,7 @@ button:disabled {
         font-size: 0.85em;
     }
     
-    .new-badge {
+    .new-badge, .new-badge-text {
         top: 8px;
         right: 8px;
         padding: 4px 8px;
@@ -759,6 +788,11 @@ button:disabled {
     
     .search-container {
         margin-bottom: 15px;
+    }
+    
+    .search-container.has-query #searchInput {
+        border-color: #007bff;
+        box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25);
     }
     
     #searchInput {

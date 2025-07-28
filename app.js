@@ -453,6 +453,8 @@ if (document.getElementById('appContainer')) {
                     console.log(`Applied is-new class to "${link.title}"`);
                 }
                 card.dataset.contentType = link.content_type || 'Video';
+                
+                // Thumbnail section (if present)
                 if (link.thumbnail_url) {
                     const thumbnailContainer = document.createElement('div');
                     thumbnailContainer.className = 'thumbnail-container';
@@ -461,7 +463,7 @@ if (document.getElementById('appContainer')) {
                         newBadge.className = 'new-badge';
                         newBadge.textContent = `New! (${getDaysAgo(link.added_at)})`;
                         thumbnailContainer.appendChild(newBadge);
-                        console.log(`Added badge to "${link.title}" with text: ${newBadge.textContent}`);
+                        console.log(`Added thumbnail badge to "${link.title}" with text: ${newBadge.textContent}`);
                     }
                     const thumbnailImage = document.createElement('img');
                     thumbnailImage.src = link.thumbnail_url;
@@ -470,8 +472,11 @@ if (document.getElementById('appContainer')) {
                     thumbnailContainer.appendChild(thumbnailImage);
                     card.appendChild(thumbnailContainer);
                 }
+                
                 const cardContent = document.createElement('div');
                 cardContent.className = 'card-content';
+                
+                // Title section with text-based badge for recent items without thumbnails
                 const title = document.createElement('h3');
                 const titleLink = document.createElement('a');
                 titleLink.href = link.url ? link.url : '#';
@@ -479,12 +484,21 @@ if (document.getElementById('appContainer')) {
                 titleLink.textContent = link.title || "Untitled Link";
                 titleLink.target = "_blank";
                 title.appendChild(titleLink);
+                if (isRecentContent && !link.thumbnail_url) {
+                    const newBadgeText = document.createElement('span');
+                    newBadgeText.className = 'new-badge-text';
+                    newBadgeText.textContent = `New! (${getDaysAgo(link.added_at)})`;
+                    title.appendChild(newBadgeText);
+                    console.log(`Added text badge to "${link.title}" with text: ${newBadgeText.textContent}`);
+                }
                 cardContent.appendChild(title);
+                
                 if (link.description) {
                     const description = document.createElement('p');
                     description.textContent = link.description;
                     cardContent.appendChild(description);
                 }
+                
                 const metaInfo = document.createElement('div');
                 metaInfo.className = 'meta-info';
                 if (link.category) {
@@ -493,6 +507,7 @@ if (document.getElementById('appContainer')) {
                     metaInfo.appendChild(categorySpan);
                 }
                 cardContent.appendChild(metaInfo);
+                
                 if (!link.locked) {
                     const actionsContainer = document.createElement('div');
                     actionsContainer.className = 'card-actions';
@@ -502,6 +517,7 @@ if (document.getElementById('appContainer')) {
                     actionsContainer.appendChild(copyButton);
                     cardContent.appendChild(actionsContainer);
                 }
+                
                 card.appendChild(cardContent);
                 tierGroup.appendChild(card);
             });
@@ -638,10 +654,9 @@ if (document.getElementById('appContainer')) {
             const shouldShow = isViewMatch && isTypeMatch && isQueryMatch;
             card.style.display = shouldShow ? 'block' : 'none';
             
-            // Apply recent-highlight class when Recent filter is active
             if (view === 'Recent' && isRecentContent) {
                 card.classList.add('recent-highlight');
-                const badge = card.querySelector('.new-badge');
+                const badge = card.querySelector('.new-badge') || card.querySelector('.new-badge-text');
                 if (badge) {
                     console.log(`Badge visible for card: ${card.querySelector('h3')?.textContent}`);
                 }
