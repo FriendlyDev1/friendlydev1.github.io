@@ -631,6 +631,38 @@ button:disabled {
     background-size: 16px;
 }
 
+/* --- NEW: Enhanced Search Styles --- */
+.search-highlight {
+    background-color: rgba(255, 235, 59, 0.3);
+    padding: 2px 4px;
+    border-radius: 3px;
+}
+
+.search-no-results {
+    text-align: center;
+    padding: 40px 20px;
+    color: #888;
+}
+
+.search-container.has-query {
+    margin-bottom: 25px;
+}
+
+.search-container.has-query #searchInput {
+    border-color: #007bff;
+    box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25);
+}
+
+#searchEmptyMessage {
+    position: relative;
+    z-index: 10;
+    background-color: #2a2a2a;
+    border: 1px solid #444;
+    border-radius: 8px;
+    padding: 20px;
+    margin: 20px 0;
+}
+
 /* --- Skeleton Loader Styles --- */
 @keyframes pulse-bg {
     0% { background-color: #2a2a2a; }

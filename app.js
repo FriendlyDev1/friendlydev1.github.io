@@ -3,6 +3,9 @@
 // Configuration - IMPORTANT: This MUST match your live backend URL
 const API_BASE_URL = "https://lustroom-downloader-backend.onrender.com/api/v1";
 
+// --- State and Data Store ---
+let originalContentHTML = null; // Add module-level variable for preserving content
+
 // --- Logic for login.html ---
 if (document.getElementById('loginForm')) {
     const loginForm = document.getElementById('loginForm');
@@ -88,7 +91,7 @@ if (document.getElementById('appContainer')) {
     let allPlatformsData = [];
     let allTiersData = {};
     let currentContentData = null;
-    let currentFilterState = { view: 'All', type: 'All', query: '' }; // Added query state
+    let currentFilterState = { view: 'All', type: 'All', query: '' };
     const userPlatformId = localStorage.getItem('user_platform_id');
     const userName = localStorage.getItem('user_name');
 
@@ -123,6 +126,61 @@ if (document.getElementById('appContainer')) {
         return Object.values(contentData)
             .flat()
             .some(link => isRecent(link.added_at));
+    }
+
+    // --- NEW: Reattach copy button listeners ---
+    function reattachCopyButtonListeners() {
+        document.querySelectorAll('.copy-btn').forEach(button => {
+            // Remove existing listeners to prevent duplicates
+            button.replaceWith(button.cloneNode(true));
+        });
+        
+        // Re-attach copy button functionality
+        document.querySelectorAll('.copy-btn').forEach(button => {
+            button.addEventListener('click', () => {
+                const linkCard = button.closest('.link-card');
+                const linkElement = linkCard.querySelector('h3 a');
+                const url = linkElement ? linkElement.href : '';
+                
+                if (url && url !== '#') {
+                    navigator.clipboard.writeText(url).then(() => {
+                        button.textContent = 'Copied! ✓';
+                        button.classList.add('copied');
+                        setTimeout(() => {
+                            button.textContent = 'Copy Link';
+                            button.classList.remove('copied');
+                        }, 2000);
+                    });
+                }
+            });
+        });
+    }
+
+    // --- NEW: Debounce function for search input ---
+    function debounce(func, wait) {
+        let timeout;
+        return function executedFunction(...args) {
+            const later = () => {
+                clearTimeout(timeout);
+                func(...args);
+            };
+            clearTimeout(timeout);
+            timeout = setTimeout(later, wait);
+        };
+    }
+
+    // --- NEW: Handle search input ---
+    function handleSearchInput(event) {
+        const query = event.target.value.toLowerCase().trim();
+        currentFilterState.query = query;
+        
+        // Clear empty message when user starts typing
+        const emptyMessage = document.getElementById('searchEmptyMessage');
+        if (emptyMessage && query === '') {
+            emptyMessage.remove();
+        }
+        
+        applyFilters();
     }
 
     // --- STEP 1: Async Guard Functions for Data Caching ---
@@ -169,7 +227,7 @@ if (document.getElementById('appContainer')) {
         }
         skeletonHTML += '</div>';
         mainContent.innerHTML = skeletonHTML;
-        document.getElementById('searchContainer').style.display = 'none'; // Ensure search is hidden
+        document.getElementById('searchContainer').style.display = 'none';
     }
 
     function renderTierSkeleton(platformName) {
@@ -184,7 +242,7 @@ if (document.getElementById('appContainer')) {
         }
         skeletonHTML += '</div>';
         mainContent.innerHTML = skeletonHTML;
-        document.getElementById('searchContainer').style.display = 'none'; // Ensure search is hidden
+        document.getElementById('searchContainer').style.display = 'none';
         addBackButtonListener('platforms');
     }
 
@@ -198,9 +256,9 @@ if (document.getElementById('appContainer')) {
             skeletonHTML += `<div class="tier-group"><div class="skeleton skeleton-title"></div><div class="skeleton-card"><div class="skeleton skeleton-thumbnail"></div><div class="skeleton-card-content"><div class="skeleton skeleton-text"></div><div class="skeleton skeleton-text short"></div></div></div></div>`;
         }
         mainContent.innerHTML = skeletonHTML;
-        document.getElementById('searchContainer').style.display = 'block'; // Show search in content view
+        document.getElementById('searchContainer').style.display = 'block';
         const searchInput = document.getElementById('searchInput');
-        if (searchInput) searchInput.value = ''; // Clear search input
+        if (searchInput) searchInput.value = '';
         const urlParams = new URLSearchParams(window.location.search);
         addBackButtonListener('tiers', urlParams.get('platform_id'));
     }
@@ -273,7 +331,7 @@ if (document.getElementById('appContainer')) {
         }
         
         mainContent.innerHTML = welcomeHTML + '<h2>Platforms</h2>' + platformsHTML;
-        document.getElementById('searchContainer').style.display = 'none'; // Ensure search is hidden
+        document.getElementById('searchContainer').style.display = 'none';
         mainContent.querySelector('.platforms-grid').addEventListener('click', handlePlatformClick);
     }
     
@@ -294,7 +352,7 @@ if (document.getElementById('appContainer')) {
         });
         tiersHTML += '</div>';
         mainContent.innerHTML = tiersHTML;
-        document.getElementById('searchContainer').style.display = 'none'; // Ensure search is hidden
+        document.getElementById('searchContainer').style.display = 'none';
         mainContent.querySelector('.tiers-grid').addEventListener('click', (e) => handleTierClick(e, platformId));
         addBackButtonListener('platforms');
     }
@@ -313,6 +371,7 @@ if (document.getElementById('appContainer')) {
 
     // --- Content View Logic ---
     async function fetchAndDisplayContent(platformId, tierId, tierName, platformName) {
+        originalContentHTML = null; // Reset when navigating to new content
         renderContentSkeleton(tierName, platformName);
         try {
             const token = localStorage.getItem('lustroom_jwt');
@@ -322,7 +381,7 @@ if (document.getElementById('appContainer')) {
             const data = await response.json();
             if (response.ok && data.status === 'success' && data.content) {
                 currentContentData = data.content;
-                currentFilterState = { view: 'All', type: 'All', query: '' }; // Reset filter state
+                currentFilterState = { view: 'All', type: 'All', query: '' };
                 
                 mainContent.innerHTML = `
                     <div class="view-header">
@@ -331,15 +390,19 @@ if (document.getElementById('appContainer')) {
                     </div>
                     <div id="filterContainer" class="filter-container"></div>
                     <div id="linksContentContainer"></div>`;
-                document.getElementById('searchContainer').style.display = 'block'; // Show search bar
+                document.getElementById('searchContainer').style.display = 'block';
                 const searchInput = document.getElementById('searchInput');
                 if (searchInput) {
-                    searchInput.value = ''; // Clear search input
-                    searchInput.addEventListener('input', debounce(handleSearchInput, 300)); // Debounced input handler
+                    searchInput.value = '';
+                    searchInput.addEventListener('input', debounce(handleSearchInput, 300));
                 }
                 addBackButtonListener('tiers', platformId);
                 renderContent(data.content);
                 setupFilters(data.content);
+                // Store the original HTML structure for search reset functionality
+                if (linksContentContainer) {
+                    originalContentHTML = linksContentContainer.innerHTML;
+                }
             } else if (response.status === 401 || response.status === 403) {
                 localStorage.clear(); window.location.href = 'login.html';
             } else {
@@ -354,7 +417,7 @@ if (document.getElementById('appContainer')) {
     function renderContent(contentData) {
         const linksContentContainer = document.getElementById('linksContentContainer');
         if (!linksContentContainer) return;
-        linksContentContainer.innerHTML = ''; 
+        linksContentContainer.innerHTML = '';
         if (Object.keys(contentData).length === 0) {
             linksContentContainer.innerHTML = `<p class="empty-tier-message">This tier has no content yet. Check back soon!</p>`;
             return;
@@ -382,7 +445,7 @@ if (document.getElementById('appContainer')) {
                         newBadge.textContent = 'New!';
                         thumbnailContainer.appendChild(newBadge);
                     }
-                    const thumbnailImage = document.createElement('img');
+                    const thumbnailImage = document.createElement('div');
                     thumbnailImage.src = link.thumbnail_url;
                     thumbnailImage.alt = `Thumbnail for ${link.title}`;
                     thumbnailImage.loading = 'lazy';
@@ -393,7 +456,7 @@ if (document.getElementById('appContainer')) {
                 cardContent.className = 'card-content';
                 const title = document.createElement('h3');
                 const titleLink = document.createElement('a');
-                titleLink.href = link.url ? link.url : '#'; 
+                titleLink.href = link.url ? link.url : '#';
                 if (!link.url) titleLink.style.cursor = 'default';
                 titleLink.textContent = link.title || "Untitled Link";
                 titleLink.target = "_blank";
@@ -406,7 +469,7 @@ if (document.getElementById('appContainer')) {
                 }
                 const metaInfo = document.createElement('div');
                 metaInfo.className = 'meta-info';
-                if (link.category) { 
+                if (link.category) {
                     const categorySpan = document.createElement('span');
                     categorySpan.innerHTML = `<strong>Category:</strong> ${link.category}`;
                     metaInfo.appendChild(categorySpan);
@@ -418,11 +481,14 @@ if (document.getElementById('appContainer')) {
                     const copyButton = document.createElement('button');
                     copyButton.className = 'copy-btn';
                     copyButton.textContent = 'Copy Link';
-                    copyButton.addEventListener('click', () => { 
+                    copyButton.addEventListener('click', () => {
                         navigator.clipboard.writeText(link.url).then(() => {
                             copyButton.textContent = 'Copied! ✓';
                             copyButton.classList.add('copied');
-                            setTimeout(() => { copyButton.textContent = 'Copy Link'; copyButton.classList.remove('copied'); }, 2000);
+                            setTimeout(() => {
+                                copyButton.textContent = 'Copy Link';
+                                copyButton.classList.remove('copied');
+                            }, 2000);
                         });
                     });
                     actionsContainer.appendChild(copyButton);
@@ -437,26 +503,10 @@ if (document.getElementById('appContainer')) {
         if (!hasVisibleContent) {
             linksContentContainer.innerHTML = `<p class="empty-tier-message">No content matches your search/filter criteria.</p>`;
         }
-    }
-    
-    // --- NEW: Debounce function for search input ---
-    function debounce(func, wait) {
-        let timeout;
-        return function executedFunction(...args) {
-            const later = () => {
-                clearTimeout(timeout);
-                func(...args);
-            };
-            clearTimeout(timeout);
-            timeout = setTimeout(later, wait);
-        };
-    }
-
-    // --- NEW: Handle search input ---
-    function handleSearchInput(event) {
-        const query = event.target.value.toLowerCase().trim();
-        currentFilterState.query = query;
-        applyFilters();
+        // Store the original HTML structure for search reset functionality
+        if (linksContentContainer && hasVisibleContent) {
+            originalContentHTML = linksContentContainer.innerHTML;
+        }
     }
 
     // --- ENHANCED: Setup filters with Recently Added support ---
@@ -547,11 +597,30 @@ if (document.getElementById('appContainer')) {
     function applyFilters() {
         const { view, type, query } = currentFilterState;
         
+        // If all filters are cleared, restore original content
+        if (view === 'All' && type === 'All' && query === '') {
+            if (originalContentHTML && document.getElementById('linksContentContainer')) {
+                document.getElementById('linksContentContainer').innerHTML = originalContentHTML;
+                // Re-attach event listeners for copy buttons
+                reattachCopyButtonListeners();
+            }
+            return;
+        }
+        
         let hasVisibleContent = false;
+        const emptyMessage = document.getElementById('searchEmptyMessage');
+        
+        // Remove existing empty message if present
+        if (emptyMessage) {
+            emptyMessage.remove();
+        }
+        
+        // Apply filters to existing DOM elements
         document.querySelectorAll('.link-card').forEach(card => {
             const cardText = (
-                (card.querySelector('h3')?.textContent || '') + ' ' + 
-                (card.querySelector('p')?.textContent || '')
+                (card.querySelector('h3')?.textContent || '') + ' ' +
+                (card.querySelector('p')?.textContent || '') + ' ' +
+                (card.querySelector('.meta-info')?.textContent || '')
             ).toLowerCase();
             
             const isViewMatch = (view === 'All') || (view === 'Recent' && card.classList.contains('is-new'));
@@ -563,14 +632,22 @@ if (document.getElementById('appContainer')) {
             if (shouldShow) hasVisibleContent = true;
         });
         
+        // Handle tier group visibility
         document.querySelectorAll('.tier-group').forEach(group => {
             const hasVisibleCards = group.querySelector('.link-card:not([style*="display: none"])');
             group.style.display = hasVisibleCards ? 'block' : 'none';
         });
         
-        const linksContentContainer = document.getElementById('linksContentContainer');
-        if (linksContentContainer && !hasVisibleContent) {
-            linksContentContainer.innerHTML = `<p class="empty-tier-message">No content matches your search/filter criteria.</p>`;
+        // Show empty message without destroying content
+        if (!hasVisibleContent) {
+            const linksContentContainer = document.getElementById('linksContentContainer');
+            if (linksContentContainer && !document.getElementById('searchEmptyMessage')) {
+                const emptyMsg = document.createElement('div');
+                emptyMsg.id = 'searchEmptyMessage';
+                emptyMsg.className = 'empty-tier-message';
+                emptyMsg.textContent = 'No content matches your search/filter criteria.';
+                linksContentContainer.appendChild(emptyMsg);
+            }
         }
     }
 
