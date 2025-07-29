@@ -208,35 +208,49 @@ if (document.getElementById('appContainer')) {
     }
 
     // --- Tier-level search ---
-    async function handleTierLevelSearch(query) {
-        const urlParams = new URLSearchParams(window.location.search);
-        const platformId = urlParams.get('platform_id');
-        if (!platformId) return;
+    function handleTierLevelSearch(query) {
+        const tierCards = document.querySelectorAll('.tier-card');
+        let visibleCount = 0;
 
-        try {
-            const tiers = await ensureTiersData(platformId);
-            const token = localStorage.getItem('lustroom_jwt');
-            let allContent = {};
+        tierCards.forEach(card => {
+            const searchText = card.dataset.searchableText || '';
+            const isMatch = query === '' || searchText.includes(query);
 
-            // Fetch content for each tier
-            for (const tier of tiers) {
-                const response = await fetch(`${API_BASE_URL}/get_patron_links?tier_id=${tier.id}`, {
-                    headers: { 'Authorization': `Bearer ${token}` }
-                });
-                const data = await response.json();
-                if (response.ok && data.status === 'success' && data.content) {
-                    allContent[tier.name] = data.content[tier.name] || [];
-                }
+            card.style.display = isMatch ? 'block' : 'none';
+            if (isMatch) {
+                visibleCount++;
+                card.classList.add('search-match');
+            } else {
+                card.classList.remove('search-match');
             }
+        });
 
-            // Render content with search applied
-            renderContent(allContent, platformId);
-            currentFilterState.query = query; // Ensure query is preserved
-            applyFilters();
-        } catch (error) {
-            console.error('Tier-level search error:', error);
-            displayError('Failed to perform tier-level search.');
+        updateTierSearchResults(visibleCount, query);
+    }
+
+    function updateTierSearchResults(visibleCount, query) {
+        const tiersGrid = document.querySelector('.tiers-grid');
+        const existingMessage = document.getElementById('tierSearchMessage');
+
+        if (existingMessage) existingMessage.remove();
+
+        if (query === '') {
+            return;
         }
+
+        const messageDiv = document.createElement('div');
+        messageDiv.id = 'tierSearchMessage';
+        messageDiv.className = 'search-result-message';
+
+        if (visibleCount === 0) {
+            messageDiv.textContent = `No tiers found matching "${query}"`;
+            messageDiv.classList.add('no-results');
+        } else {
+            messageDiv.textContent = `Found ${visibleCount} tier${visibleCount === 1 ? '' : 's'} matching "${query}"`;
+            messageDiv.classList.add('has-results');
+        }
+
+        tiersGrid.parentNode.insertBefore(messageDiv, tiersGrid);
     }
 
     // --- Async Guard Functions for Data Caching ---
@@ -404,7 +418,7 @@ if (document.getElementById('appContainer')) {
             </div>
             <div class="tiers-grid">`;
         tiers.forEach(tier => {
-            tiersHTML += `<div class="tier-card" data-tier-id="${tier.id}"><div class="tier-thumbnail" style="background-image: url('${tier.thumbnail_url || ''}')"></div><div class="tier-name">${tier.name}</div></div>`;
+            tiersHTML += `<div class="tier-card" data-tier-id="${tier.id}" data-searchable-text="${(tier.name + ' ' + (tier.description || '')).toLowerCase()}"><div class="tier-thumbnail" style="background-image: url('${tier.thumbnail_url || ''}')"></div><div class="tier-name">${tier.name}</div></div>`;
         });
         tiersHTML += '</div>';
         mainContent.innerHTML = tiersHTML;
@@ -412,6 +426,8 @@ if (document.getElementById('appContainer')) {
         searchInput.placeholder = `Search in ${platformName || 'Tiers'}`;
         searchInput.value = '';
         currentFilterState.query = '';
+        const existingMessage = document.getElementById('tierSearchMessage');
+        if (existingMessage) existingMessage.remove();
         mainContent.querySelector('.tiers-grid').addEventListener('click', (e) => handleTierClick(e, platformId));
         addBackButtonListener('platforms');
     }
