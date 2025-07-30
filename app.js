@@ -72,6 +72,44 @@ class ThemeManager {
     }
 }
 
+// --- Subscription Status Renderer ---
+function renderSubscriptionStatus() {
+    const subscriptionStatusDiv = document.getElementById('subscriptionStatus');
+    if (!subscriptionStatusDiv) return;
+
+    const expiryDateStr = localStorage.getItem('lustroom_license_expiry');
+    if (!expiryDateStr) {
+        subscriptionStatusDiv.style.display = 'none';
+        return;
+    }
+
+    try {
+        const expiryDate = new Date(expiryDateStr);
+        const now = new Date();
+        const diffTime = expiryDate - now;
+        const daysRemaining = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+        let statusText, statusClass;
+        if (daysRemaining > 7) {
+            statusText = `Active: ${daysRemaining} days remaining`;
+            statusClass = 'status-active';
+        } else if (daysRemaining > 0) {
+            statusText = `Expires in ${daysRemaining} days!`;
+            statusClass = 'status-warning';
+        } else {
+            statusText = 'Membership Expired';
+            statusClass = 'status-expired';
+        }
+
+        subscriptionStatusDiv.textContent = statusText;
+        subscriptionStatusDiv.className = `subscription-status ${statusClass}`;
+        subscriptionStatusDiv.style.display = 'block';
+    } catch (error) {
+        console.warn('Invalid license expiry date:', expiryDateStr);
+        subscriptionStatusDiv.style.display = 'none';
+    }
+}
+
 // --- Logic for login.html ---
 if (document.getElementById('loginForm')) {
     const loginForm = document.getElementById('loginForm');
@@ -117,6 +155,9 @@ if (document.getElementById('loginForm')) {
                     }
                     if (data.user_info.name) {
                         localStorage.setItem('user_name', data.user_info.name);
+                    }
+                    if (data.user_info.license_expiry) {
+                        localStorage.setItem('lustroom_license_expiry', data.user_info.license_expiry);
                     }
                 }
 
@@ -881,6 +922,9 @@ if (document.getElementById('appContainer')) {
                 searchInput.value = '';
                 currentFilterState.query = '';
             }
+
+            // Update subscription status on every page load
+            renderSubscriptionStatus();
         } catch (error) {
             console.error("Router error:", error);
             displayError("An error occurred while loading the page. Please try again.");
