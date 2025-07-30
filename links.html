@@ -5,36 +5,43 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>The Echo Chamber</title>
     <link rel="stylesheet" href="style.css">
+    <script src="app.js" defer></script>
 </head>
 <body>
     <div class="container" id="appContainer">
         <header>
             <h1>The Echo Chamber</h1>
-            <button id="logoutButton">Logout</button>
+            <div class="header-actions">
+                <div class="theme-toggle-container">
+                    <label class="theme-toggle">
+                        <input type="checkbox" id="themeToggle" aria-label="Toggle theme">
+                        <span class="slider"></span>
+                    </label>
+                </div>
+                <button id="logoutButton">Logout</button>
+            </div>
         </header>
-        <div id="searchContainer" class="search-container" style="display: none;">
-            <input type="search" id="searchInput" placeholder="Search content in this tier...">
+        <div class="search-container" id="searchContainer" style="display: none;">
+            <input type="search" id="searchInput" placeholder="Search...">
         </div>
-        <main id="mainContent">
-            <!-- Content will be dynamically loaded here -->
-        </main>
+        <div id="mainContent"></div>
     </div>
 
     <div id="platformModal" class="modal">
         <div class="modal-content">
             <span class="modal-close-btn">&times;</span>
-            <img id="modalImage" src="" alt="Platform Image">
+            <img id="modalImage" src="" alt="Platform thumbnail">
             <h2 id="modalTitle"></h2>
             <p id="modalDescription"></p>
+            
             <div id="modalTeaserContainer" style="display: none;">
                 <h3>Teaser</h3>
                 <video id="modalTeaserVideo" controls></video>
             </div>
-            <div id="modalSocials" class="modal-socials"></div>
-            <div id="modalContact" class="modal-contact"></div>
+
+            <div id="modalSocials"></div>
+            <div id="modalContact"></div>
         </div>
     </div>
-
-    <script src="app.js"></script>
 </body>
 </html>

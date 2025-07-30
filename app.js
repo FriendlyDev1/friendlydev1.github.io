@@ -12,6 +12,66 @@ let searchScope = 'platforms'; // Tracks search scope: 'platforms', 'tiers', or 
 const userPlatformId = localStorage.getItem('user_platform_id');
 const userName = localStorage.getItem('user_name');
 
+// --- Theme Manager ---
+class ThemeManager {
+    constructor() {
+        this.themeKey = 'theme_preference';
+        this.themes = ['light', 'dark', 'auto'];
+        this.mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+        this.init();
+    }
+
+    init() {
+        this.applyTheme(this.getPreferredTheme());
+        this.setupEventListeners();
+    }
+
+    getPreferredTheme() {
+        const storedTheme = localStorage.getItem(this.themeKey);
+        if (storedTheme && this.themes.includes(storedTheme)) {
+            return storedTheme;
+        }
+        return 'auto';
+    }
+
+    detectSystemTheme() {
+        return this.mediaQuery.matches ? 'dark' : 'light';
+    }
+
+    applyTheme(theme) {
+        const effectiveTheme = theme === 'auto' ? this.detectSystemTheme() : theme;
+        document.body.classList.remove('theme-light', 'theme-dark');
+        document.body.classList.add(`theme-${effectiveTheme}`);
+        localStorage.setItem(this.themeKey, theme);
+        
+        // Update toggle button state
+        const toggle = document.getElementById('themeToggle');
+        if (toggle) {
+            toggle.checked = effectiveTheme === 'dark';
+            toggle.setAttribute('aria-label', `Switch to ${effectiveTheme === 'dark' ? 'light' : 'dark'} mode`);
+        }
+    }
+
+    toggleTheme() {
+        const currentTheme = this.getPreferredTheme();
+        const newTheme = currentTheme === 'auto' ? (this.detectSystemTheme() === 'dark' ? 'light' : 'dark') :
+                        currentTheme === 'dark' ? 'light' : 'dark';
+        this.applyTheme(newTheme);
+    }
+
+    setupEventListeners() {
+        const toggle = document.getElementById('themeToggle');
+        if (toggle) {
+            toggle.addEventListener('change', () => this.toggleTheme());
+        }
+        this.mediaQuery.addEventListener('change', () => {
+            if (this.getPreferredTheme() === 'auto') {
+                this.applyTheme('auto');
+            }
+        });
+    }
+}
+
 // --- Logic for login.html ---
 if (document.getElementById('loginForm')) {
     const loginForm = document.getElementById('loginForm');
@@ -19,6 +79,9 @@ if (document.getElementById('loginForm')) {
     const passwordInput = document.getElementById('password');
     const errorMessageDiv = document.getElementById('errorMessage');
     const loadingMessageDiv = document.getElementById('loadingMessage');
+
+    // Initialize theme for login page
+    const themeManager = new ThemeManager();
 
     loginForm.addEventListener('submit', async function(event) {
         event.preventDefault();
@@ -94,6 +157,9 @@ if (document.getElementById('appContainer')) {
     const logoutButton = document.getElementById('logoutButton');
     const searchContainer = document.getElementById('searchContainer');
     const searchInput = document.getElementById('searchInput');
+
+    // Initialize theme for main app
+    const themeManager = new ThemeManager();
 
     // --- Utility Functions ---
     function isTokenValid() {
