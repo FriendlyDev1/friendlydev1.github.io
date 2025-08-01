@@ -457,7 +457,7 @@ if (document.getElementById('appContainer')) {
     function showPlatformModal(platform) {
         document.getElementById('modalImage').src = platform.thumbnail_url || '';
         document.getElementById('modalTitle').textContent = platform.name;
-        document.getElementById('modalDescription').textContent = platform.description;
+        document.getElementById('modalDescription').innerHTML = platform.description;
 
         const teaserContainer = document.getElementById('modalTeaserContainer');
         if (platform.teaser_video_urls && platform.teaser_video_urls.length > 0) {
