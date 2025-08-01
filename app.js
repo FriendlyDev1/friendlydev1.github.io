@@ -44,7 +44,6 @@ class ThemeManager {
         document.body.classList.add(`theme-${effectiveTheme}`);
         localStorage.setItem(this.themeKey, theme);
         
-        // Update toggle button state
         const toggle = document.getElementById('themeToggle');
         if (toggle) {
             toggle.checked = effectiveTheme === 'dark';
@@ -78,7 +77,9 @@ function renderSubscriptionStatus() {
     if (!subscriptionStatusDiv) return;
 
     const expiryDateStr = localStorage.getItem('lustroom_license_expiry');
-    if (!expiryDateStr) {
+    const tierName = localStorage.getItem('lustroom_tier_name');
+
+    if (!expiryDateStr || !tierName) {
         subscriptionStatusDiv.style.display = 'none';
         return;
     }
@@ -91,24 +92,33 @@ function renderSubscriptionStatus() {
 
         let statusText, statusClass;
         if (daysRemaining > 7) {
-            statusText = `Active: ${daysRemaining} days remaining`;
+            statusText = `Active: ${daysRemaining} days left`;
             statusClass = 'status-active';
         } else if (daysRemaining > 0) {
-            statusText = `Expires in ${daysRemaining} days!`;
+            statusText = `Expires in ${daysRemaining} days`;
             statusClass = 'status-warning';
         } else {
             statusText = 'Membership Expired';
             statusClass = 'status-expired';
         }
 
-        subscriptionStatusDiv.textContent = statusText;
+        // Build the new HTML structure for the enhanced display
+        subscriptionStatusDiv.innerHTML = `
+            <span class="tier-name-display">${tierName}</span>
+            <span class="status-divider">|</span>
+            <span class="status-text">${statusText}</span>
+        `;
+        
+        // Apply class to the main container for overall styling
         subscriptionStatusDiv.className = `subscription-status ${statusClass}`;
-        subscriptionStatusDiv.style.display = 'block';
+        subscriptionStatusDiv.style.display = 'flex'; // Use flexbox for alignment
+
     } catch (error) {
-        console.warn('Invalid license expiry date:', expiryDateStr);
+        console.warn('Invalid license expiry date or tier name:', expiryDateStr, tierName);
         subscriptionStatusDiv.style.display = 'none';
     }
 }
+
 
 // --- Logic for login.html ---
 if (document.getElementById('loginForm')) {
@@ -118,7 +128,6 @@ if (document.getElementById('loginForm')) {
     const errorMessageDiv = document.getElementById('errorMessage');
     const loadingMessageDiv = document.getElementById('loadingMessage');
 
-    // Initialize theme for login page
     const themeManager = new ThemeManager();
 
     loginForm.addEventListener('submit', async function(event) {
@@ -158,6 +167,9 @@ if (document.getElementById('loginForm')) {
                     }
                     if (data.user_info.license_expiry) {
                         localStorage.setItem('lustroom_license_expiry', data.user_info.license_expiry);
+                    }
+                    if (data.user_info.tier_name) {
+                        localStorage.setItem('lustroom_tier_name', data.user_info.tier_name);
                     }
                 }
 
@@ -199,7 +211,6 @@ if (document.getElementById('appContainer')) {
     const searchContainer = document.getElementById('searchContainer');
     const searchInput = document.getElementById('searchInput');
 
-    // Initialize theme for main app
     const themeManager = new ThemeManager();
 
     // --- Utility Functions ---
@@ -917,13 +928,11 @@ if (document.getElementById('appContainer')) {
                 renderPlatforms(platformsData);
             }
 
-            // Reset search input and filters when navigating
             if (searchInput) {
                 searchInput.value = '';
                 currentFilterState.query = '';
             }
 
-            // Update subscription status on every page load
             renderSubscriptionStatus();
         } catch (error) {
             console.error("Router error:", error);

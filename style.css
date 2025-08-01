@@ -968,34 +968,73 @@ button:disabled {
 
 /* --- Subscription Status Styles --- */
 .subscription-status {
-    display: inline-block;
-    padding: 8px 16px;
+    display: flex;
+    align-items: center;
+    padding: 0;
     margin-right: 10px;
     border-radius: 20px;
     font-size: 0.9em;
     font-weight: 500;
     text-align: center;
+    overflow: hidden;
     transition: background-color var(--transition-duration), color var(--transition-duration), border-color var(--transition-duration);
+    border: 1px solid transparent;
+}
+
+.tier-name-display {
+    padding: 8px 12px;
+    font-weight: bold;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    transition: background-color var(--transition-duration), color var(--transition-duration);
+}
+
+.status-divider {
+    opacity: 0.5;
+    margin: 0 4px;
+}
+
+.status-text {
+    padding: 8px 12px 8px 0;
 }
 
 .subscription-status.status-active {
     background-color: var(--color-status-active-bg);
     color: var(--color-status-active);
-    border: 1px solid var(--color-status-active);
+    border-color: var(--color-status-active);
 }
 
 .subscription-status.status-warning {
     background-color: var(--color-status-warning-bg);
     color: var(--color-status-warning);
-    border: 1px solid var(--color-status-warning);
+    border-color: var(--color-status-warning);
     animation: statusPulse 2s ease-in-out infinite;
 }
 
 .subscription-status.status-expired {
     background-color: var(--color-status-expired-bg);
     color: var(--color-status-expired);
-    border: 1px solid var(--color-status-expired);
+    border-color: var(--color-status-expired);
 }
+
+.theme-light .subscription-status.status-active .tier-name-display,
+.theme-dark .subscription-status.status-active .tier-name-display {
+    background-color: var(--color-status-active);
+    color: #fff;
+}
+
+.theme-light .subscription-status.status-warning .tier-name-display,
+.theme-dark .subscription-status.status-warning .tier-name-display {
+    background-color: var(--color-status-warning);
+    color: var(--color-background-primary);
+}
+
+.theme-light .subscription-status.status-expired .tier-name-display,
+.theme-dark .subscription-status.status-expired .tier-name-display {
+    background-color: var(--color-status-expired);
+    color: #fff;
+}
+
 
 @keyframes statusPulse {
     0%, 100% { transform: scale(1); opacity: 1; }
@@ -1071,8 +1110,14 @@ button:disabled {
     }
     
     .subscription-status {
-        padding: 6px 12px;
-        font-size: 0.85em;
+        padding: 0;
+        font-size: 0.8em;
         margin-right: 5px;
+    }
+    .tier-name-display {
+        padding: 6px 10px;
+    }
+    .status-text {
+        padding: 6px 10px 6px 0;
     }
 }
