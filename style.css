@@ -357,6 +357,7 @@ button:disabled {
     backdrop-filter: blur(2px);
 }
 
+/* --- ENHANCED MODAL STYLES --- */
 .modal {
     display: none;
     position: fixed;
@@ -366,112 +367,205 @@ button:disabled {
     width: 100%;
     height: 100%;
     overflow: auto;
-    background-color: rgba(0,0,0,0.8);
-    animation: fadeIn 0.3s;
+    background: rgba(0, 0, 0, 0.85);
+    backdrop-filter: blur(8px);
+    animation: fadeIn 0.3s ease-out;
 }
 
 .modal-content {
     position: relative;
     background-color: var(--color-modal-background);
-    margin: 5% auto;
-    padding: 30px;
+    margin: 3% auto;
     border: 1px solid var(--color-modal-border);
     width: 90%;
-    max-width: 700px;
-    border-radius: 8px;
-    box-shadow: 0 5px 15px rgba(0,0,0,0.2);
-    animation: slideIn 0.3s;
+    max-width: 800px;
+    border-radius: 16px;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4);
+    animation: slideIn 0.4s ease-out;
     transition: background-color var(--transition-duration), border-color var(--transition-duration);
+    overflow: hidden;
+}
+
+#modalBody {
+    display: flex;
+    flex-direction: column;
+}
+
+.modal-text-content {
+    padding: 25px 30px;
 }
 
 .modal-close-btn {
     color: var(--color-text-muted);
     position: absolute;
-    top: 10px;
-    right: 20px;
-    font-size: 28px;
+    top: 15px;
+    right: 25px;
+    font-size: 32px;
     font-weight: bold;
     cursor: pointer;
-    transition: color var(--transition-duration);
+    z-index: 10;
+    background: rgba(0, 0, 0, 0.1);
+    border-radius: 50%;
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all var(--transition-duration);
 }
 
 .modal-close-btn:hover {
     color: var(--color-text-primary);
+    background: rgba(0, 0, 0, 0.2);
+    transform: scale(1.1);
 }
 
 .modal-image {
     width: 100%;
-    max-height: 300px;
+    height: 300px;
     object-fit: cover;
-    border-radius: 6px;
-    margin-bottom: 20px;
+    display: block;
 }
 
-.modal-content h2 {
+.modal-text-content h2 {
     margin-top: 0;
-    color: var(--color-text-link);
+    margin-bottom: 15px;
+    color: var(--color-text-header);
+    font-size: 2em;
+    font-weight: 600;
+    transition: color var(--transition-duration);
+}
+
+.modal-text-content p {
+    color: var(--color-text-secondary);
+    line-height: 1.6;
+    margin-bottom: 20px;
+    font-size: 1.1em;
     transition: color var(--transition-duration);
 }
 
 .modal-teaser {
-    margin-top: 20px;
+    margin-top: 25px;
+    padding-top: 20px;
+    border-top: 2px solid var(--color-border-primary);
+    transition: border-color var(--transition-duration);
 }
+
+.modal-teaser h3 {
+    color: var(--color-text-header);
+    font-size: 1.3em;
+    margin-bottom: 15px;
+    font-weight: 500;
+    transition: color var(--transition-duration);
+}
+
 .modal-teaser video {
     width: 100%;
-    border-radius: 6px;
+    border-radius: 12px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
 }
 
 .modal-socials {
-    margin-top: 20px;
-    padding-top: 15px;
-    border-top: 1px solid var(--color-border-primary);
+    margin-top: 25px;
+    padding-top: 20px;
+    border-top: 2px solid var(--color-border-primary);
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
     transition: border-color var(--transition-duration);
 }
 
 .social-link {
-    display: inline-block;
-    background-color: var(--color-background-card);
+    display: inline-flex;
+    align-items: center;
+    background: linear-gradient(135deg, var(--color-background-card), var(--color-background-secondary));
     color: var(--color-text-primary);
-    padding: 8px 16px;
-    margin: 0 10px 10px 0;
-    border-radius: 20px;
+    padding: 12px 20px;
+    border-radius: 25px;
     text-decoration: none;
-    transition: background-color var(--transition-duration), color var(--transition-duration);
+    font-weight: 500;
+    font-size: 0.95em;
+    border: 1px solid var(--color-border-primary);
+    transition: all var(--transition-duration);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
 .social-link:hover {
-    background-color: var(--color-accent-primary);
+    background: var(--color-accent-primary);
     color: white;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
 }
 
 .modal-contact {
-    margin-top: 15px;
-    background-color: var(--color-background-secondary);
-    padding: 15px;
-    border-radius: 6px;
-    font-size: 0.9em;
-    transition: background-color var(--transition-duration);
+    margin-top: 20px;
+    background: linear-gradient(135deg, var(--color-background-secondary), var(--color-background-card));
+    padding: 20px;
+    border-radius: 12px;
+    font-size: 1em;
+    border: 1px solid var(--color-border-secondary);
+    transition: all var(--transition-duration);
 }
 
 .modal-contact a {
     color: var(--color-text-link);
+    font-weight: 500;
     transition: color var(--transition-duration);
 }
 
-.modal-actions {
-    margin-top: 20px;
+.modal-contact a:hover {
+    color: var(--color-text-link-hover);
 }
 
-.modal-button {
-    width: auto;
-    padding-left: 30px;
-    padding-right: 30px;
-    float: right;
+@keyframes fadeIn { 
+    from { opacity: 0; } 
+    to { opacity: 1; } 
 }
 
-@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
-@keyframes slideIn { from { transform: translateY(-30px); opacity: 0 } to { transform: translateY(0); opacity: 1 } }
+@keyframes slideIn { 
+    from { 
+        transform: translateY(-50px) scale(0.95); 
+        opacity: 0; 
+    } 
+    to { 
+        transform: translateY(0) scale(1); 
+        opacity: 1; 
+    } 
+}
 
+/* Mobile responsiveness for modal */
+@media (max-width: 768px) {
+    .modal-content {
+        margin: 10% auto;
+        width: 95%;
+        border-radius: 12px;
+    }
+    
+    .modal-text-content {
+        padding: 20px;
+    }
+    
+    .modal-image {
+        height: 200px;
+    }
+    
+    .modal-text-content h2 {
+        font-size: 1.6em;
+    }
+    
+    .modal-close-btn {
+        top: 10px;
+        right: 15px;
+        width: 35px;
+        height: 35px;
+        font-size: 28px;
+    }
+    
+    .social-link {
+        padding: 10px 16px;
+        font-size: 0.9em;
+    }
+}
 .tier-group {
     margin-bottom: 30px;
     border-left: 3px solid var(--color-accent-primary);
