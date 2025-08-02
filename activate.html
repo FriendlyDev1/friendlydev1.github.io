@@ -101,6 +101,26 @@
         .footer-link a {
             color: #00aaff;
         }
+
+        /* START: New CSS for the notice */
+        .important-note {
+            padding: 12px;
+            margin-bottom: 20px;
+            border-radius: 4px;
+            background-color: rgba(255, 193, 7, 0.1);
+            border: 1px solid rgba(255, 193, 7, 0.5);
+            color: #e0e0e0;
+            font-size: 0.9em;
+            line-height: 1.4;
+            text-align: left;
+        }
+        .important-note strong {
+            color: #ffc107; /* Bright yellow for emphasis */
+            display: block;
+            margin-bottom: 3px;
+        }
+        /* END: New CSS for the notice */
+
     </style>
 </head>
 <body>
@@ -123,6 +143,13 @@
                 <label for="password">Choose a Password</label>
                 <input type="password" id="password" class="form-control" name="password" required>
             </div>
+
+            <!-- START: New Important Notice -->
+            <div class="important-note">
+                <strong>Please save your password securely.</strong> A password reset feature is not yet available.
+            </div>
+            <!-- END: New Important Notice -->
+            
             <div class="form-group">
                 <button type="submit" id="submit-button" class="btn">Create Account</button>
             </div>
