@@ -1215,3 +1215,54 @@ button:disabled {
         padding: 6px 10px 6px 0;
     }
 }
+/* --- RENEWAL AND SUPPORT STYLES --- */
+.renewal-banner {
+    background: linear-gradient(90deg, #ffc107, #ff9800);
+    color: #1a1f2e; /* Dark text for contrast */
+    padding: 15px 20px;
+    text-align: center;
+    font-weight: bold;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 20px;
+    flex-wrap: wrap;
+    margin-bottom: 20px; /* Space between banner and content */
+    margin-top: 20px;  /* Space between header and banner */
+    border-radius: 8px;
+    border: 1px solid #ffc107;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+}
+
+.renew-button {
+    background-color: #ffffff;
+    color: #1a1f2e;
+    padding: 8px 16px;
+    border-radius: 20px;
+    text-decoration: none;
+    font-weight: bold;
+    transition: transform 0.2s, background-color 0.2s;
+    border: 1px solid #1a1f2e;
+    white-space: nowrap;
+}
+
+.renew-button:hover {
+    background-color: #f0f0f0;
+    transform: scale(1.05);
+}
+
+.header-support-link {
+    color: var(--color-text-primary);
+    background-color: var(--color-accent-primary);
+    padding: 8px 12px;
+    border-radius: 4px;
+    text-decoration: none;
+    font-size: 0.9em;
+    font-weight: 500;
+    margin-right: 10px;
+    transition: background-color var(--transition-duration);
+}
+
+.header-support-link:hover {
+    background-color: var(--color-accent-hover);
+}

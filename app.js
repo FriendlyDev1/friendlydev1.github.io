@@ -119,6 +119,53 @@ function renderSubscriptionStatus() {
     }
 }
 
+// --- NEW RENEWAL AND SUPPORT RENDERERS ---
+function renderRenewalBanner() {
+    const status = localStorage.getItem('lustroom_subscription_status');
+    const existingBanner = document.getElementById('renewalBanner');
+    if (existingBanner) {
+        existingBanner.remove();
+    }
+
+    if (status === 'expiring') {
+        const expiryDateStr = localStorage.getItem('lustroom_license_expiry');
+        const renewalUrl = localStorage.getItem('lustroom_renewal_url');
+
+        if (!expiryDateStr || !renewalUrl) return; // Don't show if data is missing
+
+        const expiryDate = new Date(expiryDateStr);
+        const now = new Date();
+        const diffTime = expiryDate - now;
+        const days = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+        
+        const banner = document.createElement('div');
+        banner.id = 'renewalBanner';
+        banner.className = 'renewal-banner';
+        banner.innerHTML = `
+            <span>Your access expires in ${days} day${days !== 1 ? 's' : ''}. Please renew to maintain access.</span>
+            <a href="${renewalUrl}" target="_blank" class="renew-button">Renew Now</a>
+        `;
+        
+        const appContainer = document.getElementById('appContainer');
+        if (appContainer) {
+            // Prepend banner inside the container but after the header
+            appContainer.querySelector('header').after(banner);
+        }
+    }
+}
+
+function renderHeaderActions() {
+    const supportUrl = localStorage.getItem('lustroom_support_url');
+    const supportLink = document.getElementById('supportLink');
+
+    if (supportLink && supportUrl) {
+        supportLink.href = supportUrl;
+        supportLink.style.display = 'inline-block';
+    } else if (supportLink) {
+        supportLink.style.display = 'none';
+    }
+}
+
 
 // --- Logic for login.html ---
 if (document.getElementById('loginForm')) {
@@ -171,6 +218,17 @@ if (document.getElementById('loginForm')) {
                     if (data.user_info.tier_name) {
                         localStorage.setItem('lustroom_tier_name', data.user_info.tier_name);
                     }
+                    // --- START: NEW LOCALSTORAGE ITEMS ---
+                    if (data.user_info.subscription_status) {
+                        localStorage.setItem('lustroom_subscription_status', data.user_info.subscription_status);
+                    }
+                    if (data.user_info.renewal_url) {
+                        localStorage.setItem('lustroom_renewal_url', data.user_info.renewal_url);
+                    }
+                    if (data.user_info.support_url) {
+                        localStorage.setItem('lustroom_support_url', data.user_info.support_url);
+                    }
+                    // --- END: NEW LOCALSTORAGE ITEMS ---
                 }
 
                 window.location.href = 'links.html';
