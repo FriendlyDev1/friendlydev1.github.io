@@ -944,6 +944,11 @@ if (document.getElementById('appContainer')) {
 
     // --- Main Application Router ---
     async function router() {
+        // --- START: CORRECTED LOGIC ---
+        renderRenewalBanner();
+        renderHeaderActions();
+        // --- END: CORRECTED LOGIC ---
+
         if (!isTokenValid()) {
             window.location.href = 'login.html';
             return;
