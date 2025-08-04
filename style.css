@@ -1266,3 +1266,22 @@ button:disabled {
 .header-support-link:hover {
     background-color: var(--color-accent-hover);
 }
+/* Add this at the end of style.css */
+
+.header-download-link {
+    color: #fff;
+    background-color: var(--color-success); /* Use the green success color */
+    padding: 8px 12px;
+    border-radius: 4px;
+    text-decoration: none;
+    font-size: 0.9em;
+    font-weight: 500;
+    margin-right: 10px;
+    transition: all var(--transition-duration);
+}
+
+.header-download-link:hover {
+    background-color: var(--color-success);
+    filter: brightness(110%);
+    transform: scale(1.05);
+}

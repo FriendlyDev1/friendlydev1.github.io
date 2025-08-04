@@ -155,6 +155,7 @@ function renderRenewalBanner() {
 }
 
 function renderHeaderActions() {
+    // --- 1. Handle Support Link ---
     const supportUrl = localStorage.getItem('lustroom_support_url');
     const supportLink = document.getElementById('supportLink');
 
@@ -163,6 +164,14 @@ function renderHeaderActions() {
         supportLink.style.display = 'inline-block';
     } else if (supportLink) {
         supportLink.style.display = 'none';
+    }
+
+    // --- 2. Handle Global Download App Button ---
+    const downloadAppButton = document.getElementById('downloadAppButton');
+    if (downloadAppButton) {
+        // Use the new, corrected Dropbox link you provided
+        downloadAppButton.href = "https://www.dropbox.com/scl/fi/n1p7i75ncesne1o62vbng/TheEchoChamber.zip?rlkey=msmiiuso5fgf2kuse0sz6amwp&st=ckcjc9fy&dl=1";
+        downloadAppButton.style.display = 'inline-block';
     }
 }
 
